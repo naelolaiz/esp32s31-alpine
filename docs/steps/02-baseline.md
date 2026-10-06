@@ -38,8 +38,14 @@ Use `--baud 460800` if it fails mid-write.
 
 ## 3. Boot and look around
 
-Open the console at 115200 (`picocom -b 115200 /dev/ttyUSB0`, or
-`venv/bin/python -m serial.tools.miniterm /dev/ttyUSB0 115200`), tap **RST**, and
+Open the console at 115200 with pyserial's terminal (installed with esptool;
+exit with Ctrl+]), logging to a file:
+
+```sh
+script -c "venv/bin/python -m serial.tools.miniterm --raw /dev/ttyUSB0 115200" boot-baseline.log
+```
+
+`picocom -b 115200`, `tio` or `screen ... 115200` work too. Tap **RST** and
 watch SPL, OpenSBI, U-Boot and Linux go by to a root shell. Then run:
 
 ```sh
