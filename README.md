@@ -32,4 +32,4 @@ as the work happens.
 
 ## Status
 
-Phase 1, step 1 (repositories) done. Next: step 2, build and boot the Espressif baseline.
+Steps 1 and 2 done: the Espressif baseline boots ([journal](docs/journal/2026-10-06-baseline.md)). Next: step 3, probe Ethernet and USB.

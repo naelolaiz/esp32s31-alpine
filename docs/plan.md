@@ -120,6 +120,6 @@ Done when: the board reaches the repository over Wi-Fi with Ethernet unplugged.
 ## Open questions
 
 - [ ] Does Ethernet link up on the preview kernel? (step 3)
-- [ ] Does the core implement the F extension? (affects whether `ilp32f` is ever worth it)
+- [x] Does the core implement the F extension? No: the hart reports `rv32imac_zicsr_zifencei_zaamo_zalrsc_zca` (step 2).
 - [ ] Can the flash layout give the rootfs more than 4 MiB?
 - [ ] Does libucontext support riscv32? (inferred risk, not checked)
