@@ -37,6 +37,8 @@ and the partition code finds `sda1 sda2`. The stick is a Ventoy stick:
 `sha256sum`, unmount, remount, `sha256sum` again: both
 `b109b263a50fdcb30262d6843ae708864c460b0e3820ea093fd8756f0229c5af`.
 Unmounting drops the cached pages, so the second read came from the stick.
+On the PC, the same file on the stick gives the same checksum, so the exFAT
+filesystem the board wrote is valid for another OS, not only for our driver.
 
 ## Cost
 
