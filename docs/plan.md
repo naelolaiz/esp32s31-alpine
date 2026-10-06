@@ -47,6 +47,8 @@ Done when: the baseline boots repeatably and the numbers are in the journal.
 
 Done when: microSD and a pendrive both read and write under Buildroot.
 Steps 5 and 6 are independent; step 6 runs first because it needs no wiring.
+Step 5 is parked (2026-10-06): no microSD breakout yet. Phase 4 uses a USB
+pendrive as the root device until it comes back.
 
 ## Phase 3: Alpine riscv32 on the host
 
@@ -71,8 +73,8 @@ Done when: OpenRC boots in QEMU and the chroot builds packages bootstrap.sh does
 
 12. **Alpine binaries on Buildroot.** `busybox-static`, then dynamic BusyBox with
     `/lib/ld-musl-riscv32.so.1`, from the Buildroot shell.
-13. **Alpine root on microSD.** ext4 partition from `apk --root --arch riscv32 --initdb`;
-    boot `root=/dev/mmcblk0p2 rootwait init=/bin/sh`. Buildroot cramfs stays in
+13. **Alpine root on a pendrive** (microSD once step 5 is done). ext4 partition from
+    `apk --root --arch riscv32 --initdb`; boot `root=/dev/sda2 rootwait init=/bin/sh`. Buildroot cramfs stays in
     flash as the rescue system.
 14. **OpenRC.** devfs, dmesg, mdev, hostname, bootmisc, local and a getty on the
     console found in step 2; login prompt.
@@ -125,6 +127,6 @@ Done when: the board reaches the repository over Wi-Fi with Ethernet unplugged.
 - [ ] Why 100 Mbps on a gigabit PHY? Check on a known gigabit port.
 - [x] Does the core implement the F extension? No: the hart reports `rv32imac_zicsr_zifencei_zaamo_zalrsc_zca` (step 2).
 - [ ] Can the flash layout give the rootfs more than 4 MiB? Kernel slot is 7 MiB (0x500000 to 0xC00000) with the kernel at 3.7 MiB, so moving `SLOT_ROOTFS` down is possible (layout in ground-truth.md).
-- [ ] Does libucontext support riscv32? (inferred risk, not checked)
+- [x] Does libucontext support riscv32? Upstream has `arch/riscv32`; aports passes `ARCH=$CARCH`, so no aports change expected (check the 1.5.2 tarball in step 8).
 - [ ] Buildroot forces `CONFIG_BLK_DEV_INITRD=y` (kconfig fixup in `linux/linux.mk`, confirmed: the defconfig sets `BR2_TARGET_ROOTFS_CPIO=y` with gzip), which pulls in all initramfs decompressors. Drop the cpio image to save kernel flash, once nothing on the board needs it.
 - [ ] The block layer costs about 1 MiB of free RAM after boot but only 48 KiB statically; find where it goes (step 4).

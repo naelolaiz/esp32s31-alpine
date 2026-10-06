@@ -32,4 +32,4 @@ as the work happens.
 
 ## Status
 
-Phase 1 done. Steps 4 and 6 done: our own kernel with the block layer, ext4, vfat, exFAT and USB pendrives ([journal](docs/journal/)). Next: step 5, microSD, which needs a breakout wired to the header.
+Phase 1 done. Steps 4 and 6 done: our own kernel with the block layer, ext4, vfat, exFAT and USB pendrives ([journal](docs/journal/)). Step 5 (microSD) is parked until a breakout is available. Next: Phase 3, Alpine riscv32 on the host.
