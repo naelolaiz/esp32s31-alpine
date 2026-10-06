@@ -61,6 +61,7 @@ slot fails the build instead of silently overwriting the rootfs.
 | Rootfs | 0xC00000 | 4 MiB | `rootfs.cramfs` |
 
 The rootfs at flash offset 0xC00000 appears at 0x40b00000 in Linux (physmap),
-so the flash window maps offset 0x100000 at 0x40000000 (inferred from these two
-numbers; confirm with `CONFIG_XIP_PHYS_ADDR`, expected 0x40400000).
+so the flash window maps offset 0x100000 at 0x40000000. Verified: the kernel
+config has `CONFIG_XIP_PHYS_ADDR=0x40400000`, which is the kernel slot (0x500000)
+through the same mapping.
 
