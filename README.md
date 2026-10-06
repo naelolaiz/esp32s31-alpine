@@ -32,4 +32,4 @@ as the work happens.
 
 ## Status
 
-Steps 1 and 2 done: the Espressif baseline boots ([journal](docs/journal/2026-10-06-baseline.md)). Next: step 3, probe Ethernet and USB.
+Phase 1 done: the Espressif baseline boots, Ethernet and USB host work ([journal](docs/journal/)). Next: [step 4](docs/steps/04-first-kernel.md), first own kernel with the block layer.

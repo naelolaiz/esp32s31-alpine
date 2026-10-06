@@ -119,7 +119,9 @@ Done when: the board reaches the repository over Wi-Fi with Ethernet unplugged.
 
 ## Open questions
 
-- [ ] Does Ethernet link up on the preview kernel? (step 3)
+- [x] Does Ethernet link up on the preview kernel? Yes: YT8531 PHY, DHCP and internet work, link at 100 Mbps (step 3).
+- [ ] Pin the Ethernet MAC: it is random on every boot (step 3).
+- [ ] Why 100 Mbps on a gigabit PHY? Check on a known gigabit port.
 - [x] Does the core implement the F extension? No: the hart reports `rv32imac_zicsr_zifencei_zaamo_zalrsc_zca` (step 2).
 - [ ] Can the flash layout give the rootfs more than 4 MiB?
 - [ ] Does libucontext support riscv32? (inferred risk, not checked)
