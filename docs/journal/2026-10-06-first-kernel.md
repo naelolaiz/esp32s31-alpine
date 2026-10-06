@@ -29,8 +29,10 @@ full image and booted it. Banner: `#2 Tue Oct 6 23:09:46 CEST 2026`.
 | `free`: free | 12560 KiB | 11488 KiB | -1072 KiB |
 | `free`: available | 12112 KiB | 11056 KiB | -1056 KiB |
 
-`s31_full_flash.bin` stays 16,080,896 B because it is padded to the slot layout,
-so the larger kernel still fits its flash slot.
+`s31_full_flash.bin` stays 16,080,896 B because it ends where the rootfs ends
+(0xC00000 + 3,497,984 B = 0xF56000), and the rootfs did not change. The kernel
+slot runs from 0x500000 to 0xC00000 (7 MiB), so it has room; see the flash
+layout in [ground-truth.md](../ground-truth.md).
 
 The static RAM cost is small (about 48 KiB), but about 1 MiB less is free after
 boot. Inferred, not yet measured: the difference is runtime allocations of the

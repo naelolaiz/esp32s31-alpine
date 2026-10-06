@@ -124,7 +124,7 @@ Done when: the board reaches the repository over Wi-Fi with Ethernet unplugged.
 - [ ] Pin the Ethernet MAC: it is random on every boot (step 3).
 - [ ] Why 100 Mbps on a gigabit PHY? Check on a known gigabit port.
 - [x] Does the core implement the F extension? No: the hart reports `rv32imac_zicsr_zifencei_zaamo_zalrsc_zca` (step 2).
-- [ ] Can the flash layout give the rootfs more than 4 MiB?
+- [ ] Can the flash layout give the rootfs more than 4 MiB? Kernel slot is 7 MiB (0x500000 to 0xC00000) with the kernel at 3.7 MiB, so moving `SLOT_ROOTFS` down is possible (layout in ground-truth.md).
 - [ ] Does libucontext support riscv32? (inferred risk, not checked)
 - [ ] Buildroot forces `CONFIG_BLK_DEV_INITRD=y` (kconfig fixup in `linux/linux.mk`, confirmed: the defconfig sets `BR2_TARGET_ROOTFS_CPIO=y` with gzip), which pulls in all initramfs decompressors. Drop the cpio image to save kernel flash, once nothing on the board needs it.
 - [ ] The block layer costs about 1 MiB of free RAM after boot but only 48 KiB statically; find where it goes (step 4).

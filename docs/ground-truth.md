@@ -43,3 +43,24 @@ something changes.
 [cramfs]: https://github.com/espressif/esp-buildroot-external/blob/buildroot/v2025.02-esp32s31/board/espressif/esp32s31/rootfs-cramfs.sh
 [vanbuong]: https://github.com/vanbuong/esp32-s31-linux
 [platima]: https://github.com/platima/esp32-s31-linux
+
+## Flash layout
+
+Defined in esp-linux-bsp `tools/gen_esp_flash_image.sh` (branch
+`integration/v1.0-esp32s31`, 22455bf), which `esptool merge-bin` turns into
+`s31_full_flash.bin`. Each slot can be overridden with a `SLOT_*` variable.
+esptool refuses to merge overlapping regions, so a kernel that outgrows its
+slot fails the build instead of silently overwriting the rootfs.
+
+| Slot | Flash offset | Size | Content |
+| --- | --- | --- | --- |
+| SPL | 0x002000 | to 0x100000 | `spl_app.bin`, U-Boot SPL as an ESP app image |
+| U-Boot | 0x100000 | 2 MiB | `u-boot.itb` (FIT: OpenSBI, U-Boot, its DTB) |
+| DTB | 0x300000 | 2 MiB | Linux device tree |
+| Kernel | 0x500000 | 7 MiB | `xipImage`, executed in place |
+| Rootfs | 0xC00000 | 4 MiB | `rootfs.cramfs` |
+
+The rootfs at flash offset 0xC00000 appears at 0x40b00000 in Linux (physmap),
+so the flash window maps offset 0x100000 at 0x40000000 (inferred from these two
+numbers; confirm with `CONFIG_XIP_PHYS_ADDR`, expected 0x40400000).
+
