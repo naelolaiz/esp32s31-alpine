@@ -30,13 +30,15 @@ location and dependencies; space toggles `[*]`.
 partition table. They do not appear in the menu: their prompt has
 `if PARTITION_ADVANCED`, which only hides it, while `default y` still applies.
 Leave `PARTITION_ADVANCED` off; the `.config` check below shows both as `y`.
-Leave `BLK_DEV_INITRD` off too (General setup): this board boots without an
-initramfs, and turning it on pulls in every initramfs decompressor. Save on exit.
+`BLK_DEV_INITRD` (General setup) comes back on after you save: Buildroot's
+kernel fixups in `linux/linux.mk` force it when a cpio rootfs image is
+enabled. `linux-diff-config` compares against the config without those
+fixups, so it reports it as a change. Leave it for now. Save on exit.
 
 Check, rebuild, and see the change against Espressif's defconfig:
 
 ```sh
-grep -E '^CONFIG_(SCSI|BLK_DEV_SD|USB_STORAGE|EXFAT_FS|NLS_UTF8|MSDOS_PARTITION|EFI_PARTITION|PARTITION_ADVANCED|BLK_DEV_INITRD)=' build/linux-integration_v6.18-esp32s31/.config
+grep -E '^CONFIG_(SCSI|BLK_DEV_SD|USB_STORAGE|EXFAT_FS|NLS_UTF8|MSDOS_PARTITION|EFI_PARTITION|PARTITION_ADVANCED)=' build/linux-integration_v6.18-esp32s31/.config
 make linux-rebuild all
 make linux-diff-config
 ```
