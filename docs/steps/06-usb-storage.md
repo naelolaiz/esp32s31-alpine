@@ -64,22 +64,25 @@ first, then plug it in:
 ```sh
 dmesg | tail -20
 cat /proc/partitions
-mkdir -p /mnt/usb
-mount /dev/sda1 /mnt/usb
+mount /dev/sda1 /mnt
 mount | grep sda
 ```
 
-If the stick has no partition table, use `/dev/sda` instead of `/dev/sda1`.
+The root filesystem is a read-only cramfs, so no new directories can be created
+in it; the existing empty `/mnt` serves as the mount point. BusyBox `blkid`
+does not print the filesystem type: add `-t exfat` or `-t vfat` to `mount` if
+autodetection fails. If the stick has no partition table, use `/dev/sda`
+instead of `/dev/sda1`.
 
 ## 3. Write and read back
 
 ```sh
-dd if=/dev/urandom of=/mnt/usb/board.bin bs=1024 count=1024
-sha256sum /mnt/usb/board.bin
-umount /mnt/usb
-mount /dev/sda1 /mnt/usb
-sha256sum /mnt/usb/board.bin
-umount /mnt/usb
+dd if=/dev/urandom of=/mnt/board.bin bs=1024 count=1024
+sha256sum /mnt/board.bin
+umount /mnt
+mount /dev/sda1 /mnt
+sha256sum /mnt/board.bin
+umount /mnt
 free
 ```
 
