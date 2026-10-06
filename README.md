@@ -32,4 +32,4 @@ as the work happens.
 
 ## Status
 
-Phase 1 done: the Espressif baseline boots, Ethernet and USB host work. Step 4 done: our own kernel with the block layer, ext4 and vfat boots ([journal](docs/journal/)). Next: [step 6](docs/steps/06-usb-storage.md), USB pendrives, ahead of step 5 (microSD), which needs wiring.
+Phase 1 done. Steps 4 and 6 done: our own kernel with the block layer, ext4, vfat, exFAT and USB pendrives ([journal](docs/journal/)). Next: step 5, microSD, which needs a breakout wired to the header.
