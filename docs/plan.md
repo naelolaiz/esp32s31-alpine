@@ -126,5 +126,5 @@ Done when: the board reaches the repository over Wi-Fi with Ethernet unplugged.
 - [x] Does the core implement the F extension? No: the hart reports `rv32imac_zicsr_zifencei_zaamo_zalrsc_zca` (step 2).
 - [ ] Can the flash layout give the rootfs more than 4 MiB?
 - [ ] Does libucontext support riscv32? (inferred risk, not checked)
-- [ ] Buildroot forces `CONFIG_BLK_DEV_INITRD=y` (kconfig fixup, likely because a cpio rootfs image is enabled), which pulls in all initramfs decompressors. Drop the cpio image to save kernel flash, once nothing on the board needs it.
+- [ ] Buildroot forces `CONFIG_BLK_DEV_INITRD=y` (kconfig fixup in `linux/linux.mk`, confirmed: the defconfig sets `BR2_TARGET_ROOTFS_CPIO=y` with gzip), which pulls in all initramfs decompressors. Drop the cpio image to save kernel flash, once nothing on the board needs it.
 - [ ] The block layer costs about 1 MiB of free RAM after boot but only 48 KiB statically; find where it goes (step 4).
