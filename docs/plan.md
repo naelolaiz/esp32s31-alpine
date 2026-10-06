@@ -46,6 +46,7 @@ Done when: the baseline boots repeatably and the numbers are in the journal.
    hangs with USB storage). Same checksum test on `/dev/sda1`.
 
 Done when: microSD and a pendrive both read and write under Buildroot.
+Steps 5 and 6 are independent; step 6 runs first because it needs no wiring.
 
 ## Phase 3: Alpine riscv32 on the host
 
@@ -125,3 +126,4 @@ Done when: the board reaches the repository over Wi-Fi with Ethernet unplugged.
 - [x] Does the core implement the F extension? No: the hart reports `rv32imac_zicsr_zifencei_zaamo_zalrsc_zca` (step 2).
 - [ ] Can the flash layout give the rootfs more than 4 MiB?
 - [ ] Does libucontext support riscv32? (inferred risk, not checked)
+- [ ] The block layer costs about 1 MiB of free RAM after boot but only 48 KiB statically; find where it goes (step 4).

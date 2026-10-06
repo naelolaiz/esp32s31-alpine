@@ -22,5 +22,9 @@ make -C "$br" O="$out" linux-reconfigure
 make -C "$br" O="$out"
 
 echo
-grep -E '^CONFIG_(BLOCK|BLK_DEV_LOOP|EXT4_FS|VFAT_FS)=' "$out"/build/linux-*/.config || true
+# Show whether each option from the fragments made it into the kernel config
+kconf=$(ls "$out"/build/linux-*/.config | head -1)
+grep -h '^CONFIG_' "$repo"/kernel/fragments/*.config | while read -r opt; do
+	if grep -qx "$opt" "$kconf"; then echo "ok       $opt"; else echo "MISSING  $opt"; fi
+done
 ls -l "$out/images/xipImage" "$out/images/s31_full_flash.bin"
