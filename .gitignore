@@ -1,0 +1,8 @@
+# Build outputs and downloaded trees
+/build/
+/output/
+/dl/
+*.bin
+*.cramfs
+*.img
+*.img.gz
