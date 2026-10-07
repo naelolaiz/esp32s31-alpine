@@ -79,8 +79,10 @@ Done when: OpenRC boots in QEMU and the chroot builds packages bootstrap.sh does
     `/lib/ld-musl-riscv32-sf.so.1` (soft-float loader name), from the Buildroot shell.
     Check first whether Buildroot's musl uses the same name: `ls /lib/ld-musl*`.
 13. **Alpine root on a pendrive** (microSD once step 5 is done). ext4 partition from
-    `apk --root --arch riscv32 --initdb`; boot `root=/dev/sda2 rootwait init=/bin/sh`. Buildroot cramfs stays in
-    flash as the rescue system.
+    `apk --root --arch riscv32 --initdb`; boot `root=/dev/sda1 rootwait init=/bin/sh`,
+    set with `setenv bootargs` at the U-Boot prompt (U-Boot's environment is not saved,
+    so a reset boots Buildroot's cramfs, the rescue system). The device tree's
+    `bootargs` changes once Alpine boots to a login.
 14. **OpenRC.** devfs, dmesg, mdev, hostname, bootmisc, local and a getty on the
     console found in step 2; login prompt.
 15. **Network and apk.** Ethernet via OpenRC; repository served over HTTP from the
