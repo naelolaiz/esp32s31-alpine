@@ -83,11 +83,13 @@ Done when: OpenRC boots in QEMU and the chroot builds packages bootstrap.sh does
     set with `setenv bootargs` at the U-Boot prompt (U-Boot's environment is not saved,
     so a reset boots Buildroot's cramfs, the rescue system). The device tree's
     `bootargs` changes once Alpine boots to a login.
-14. **OpenRC.** devfs, dmesg, mdev, hostname, bootmisc, local and a getty on the
-    console found in step 2; login prompt.
+14. **OpenRC.** sysfs, devfs, dmesg, swclock (no RTC), hostname, bootmisc, local, and a
+    getty on the console found in step 2; login prompt. mdev moves to step 16: its
+    OpenRC service needs `CONFIG_UEVENT_HELPER`, which this kernel lacks.
 15. **Network and apk.** Ethernet via OpenRC; repository served over HTTP from the
     PC; `apk update`, `apk add nano`, signature verified.
-16. **Pendrive hotplug.** mdev rule or OpenRC service mounting sticks under `/media`.
+16. **Pendrive hotplug.** mdev as a netlink daemon (`mdev -d`), with an mdev rule or
+    OpenRC service mounting sticks under `/media`.
 17. **SSH.** Dropbear with devpts; `rc-update add dropbear default`.
 
 Done when: the original plan's "Definition of Success" console session runs on the
