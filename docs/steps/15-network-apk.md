@@ -112,8 +112,7 @@ python3 -m http.server 8080 --directory .local/share/abuild
 ```
 
 Leave it running in its own terminal. Everyone on the local network can read
-the packages while it runs; nothing else of the PC is served. If the board
-cannot connect later, check whether the PC's firewall blocks port 8080.
+the packages while it runs; nothing else of the PC is served.
 
 ## 5. apk on the board
 
@@ -129,6 +128,17 @@ apk update
   `http://.../main/riscv32/APKINDEX.tar.gz`; the PC's terminal logs the
   request.
 - `apk update` ends with a line counting the packages available.
+
+If apk prints a warning instead, its last words say how far the request got:
+
+| Warning ends with | Meaning |
+| --- | --- |
+| `Connection refused` | The PC answered, but nothing listens on port 8080: the server is not running, or a firewall rule rejects the connection. |
+| `Host is unreachable` | The PC did not answer the board's ARP request ("who has this address?") at all. A PC on Wi-Fi can answer late; run `apk update` again. |
+| `UNTRUSTED signature` | The index arrived, but no key in `/etc/apk/keys` matches its signature (the test below). |
+
+With a warning, apk keeps the index it saved last time, if any, and says
+`1 stale`.
 
 Now the signature check. The index is signed with the abuild key from step
 7, and apk accepts it only because the public key is in `/etc/apk/keys`. Move
@@ -171,6 +181,12 @@ BOARD:
 ```sh
 reboot
 ```
+
+OpenRC runs the shutdown runlevel, and the kernel prints its last line,
+`reboot: Restarting system`. The board then stays silent: Espressif's
+OpenSBI answers the restart request by resetting CPU core 0 only, and the
+chip does not come back from that (journal of this step). Tap **RST** once
+that line has appeared; the root is read-only by then, so nothing is lost.
 
 The stick boots Alpine again (step 14b). OpenRC now prints
 ` * Starting networking`, with `lo` and `eth0`, in the boot runlevel. After

@@ -140,6 +140,8 @@ Done when: the board reaches the repository over Wi-Fi with Ethernet unplugged.
 
 - [x] Does Ethernet link up on the preview kernel? Yes: YT8531 PHY, DHCP and internet work, link at 100 Mbps (step 3).
 - [ ] Pin the Ethernet MAC: it is random on every boot (step 3).
+- [ ] `reboot` and `poweroff` end with the board halted; only RST restarts it. Espressif's OpenSBI handles every SBI SRST request by setting the HP core 0 software reset bit (`LP_AONCLKRST_HPCORE0_RESET_CTRL_REG` bit 20), and the chip does not come back from it (step 15).
+- [ ] The network costs about 960 KiB of available RAM, 756 KiB of it in no `/proc/meminfo` counter; check whether it is the Ethernet driver's receive buffers (compare `MemFree` around `ifdown eth0`, step 15).
 - [ ] Why 100 Mbps on a gigabit PHY? Check on a known gigabit port.
 - [x] Does the core implement the F extension? No: the hart reports `rv32imac_zicsr_zifencei_zaamo_zalrsc_zca` (step 2).
 - [ ] Can the flash layout give the rootfs more than 4 MiB? Kernel slot is 7 MiB (0x500000 to 0xC00000) with the kernel at 3.7 MiB, so moving `SLOT_ROOTFS` down is possible (layout in ground-truth.md).

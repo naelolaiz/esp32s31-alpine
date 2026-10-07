@@ -233,7 +233,8 @@ poweroff
 OpenRC runs the shutdown runlevel: `killprocs`, `savecache`, swclock saving
 the time, `mount-ro`. Tap **RST** once `mount-ro` has reported
 `Remounting remaining filesystems read-only` and the kernel has printed its
-last line. A plain reset boots Buildroot; booting Alpine again means stopping
+last line. The board does not switch itself off: the CPU halts, and only RST
+starts it again (step 15's journal explains why). A plain reset boots Buildroot; booting Alpine again means stopping
 U-Boot and typing the two lines from section 3. Step 14b removes that typing:
 [14b-boot-from-stick.md](14b-boot-from-stick.md).
 
