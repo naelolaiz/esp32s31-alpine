@@ -69,6 +69,20 @@ cat /etc/resolv.conf
   plan), so the router may hand out a different address each time. For apk
   that does not matter: the board only connects out.
 
+**Without a cable most of the time.** With `auto eth0`, a boot without the
+cable waits about 9 seconds at ` *   eth0 ...`: udhcpc sends three requests
+3 seconds apart (BusyBox defaults) before `-b` sends it to the background.
+To skip that wait, drop the `auto eth0` line and keep the `iface` block, so
+the networking service starts only `lo` at boot and `ifup eth0` still knows
+to use DHCP:
+
+```sh
+printf 'auto lo\niface lo inet loopback\n\niface eth0 inet dhcp\n' > /etc/network/interfaces
+```
+
+With the cable plugged in, `ifup eth0` gets a lease and `ifdown eth0`
+releases it.
+
 ## 3. Internet and the clock
 
 BOARD. This checks that names resolve and the internet answers, then sets
