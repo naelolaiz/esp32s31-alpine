@@ -173,8 +173,15 @@ sudo mkfs.ext4 -L alpine-root -E lazy_itable_init=0,lazy_journal_init=0 /dev/sdX
   the journal unzeroed and the kernel's `ext4lazyinit` thread zeroes them in
   the background after the first mount. That would be the board's job, over
   USB, on a 16 MB system, so the PC does it now.
-- If mkfs asks `Proceed anyway?` because it still finds an old file system
-  signature inside the new partition, answer `y`.
+- On a stick that had exFAT or FAT in its first partition, wipefs reports
+  `ignoring nested "dos" partition table on non-whole disk device`, and
+  mkfs then says `/dev/sdX1 contains 'DOS/MBR boot sector' data` and asks
+  `Proceed anyway?`. The old boot sector ends with `55 aa`, the same marker
+  as an MBR, and wipefs leaves a "partition table" inside a partition alone
+  without `--force`. Answer `y`: the sector lies before ext4's superblock (at
+  byte 1024), and the kernel reads partition tables only from whole disks.
+- Run mkfs on its own, not pasted together with other lines, because its
+  question takes the next pasted line as the answer, which counts as no.
 
 Mount the new file system, because the root tree goes into it in section 5.
 HOST:
