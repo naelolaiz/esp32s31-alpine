@@ -64,7 +64,8 @@ pendrive as the root device until it comes back.
 10. **Full-system QEMU.** Mainline 6.18 `rv32_defconfig` plus virtio under
     `qemu-system-riscv32 -M virt`; OpenRC to a login; `apk add` from the local repo.
 11. **Native build chroot.** riscv32 container with qemu-user binfmt; abuild builds
-    nano and dropbear (ca-certificates came with step 9). curl, iproute2,
+    nano, dropbear, vim, htop and neofetch (ca-certificates came with step 9);
+    mc and fastfetch follow in the background during Phase 4. curl, iproute2,
     e2fsprogs, exfatprogs, strace and gdbserver are deferred: together they pull
     in about 145 more packages (python3, cmake, elfutils, glib), mostly for
     documentation and optional features, so they wait for patches that trim
