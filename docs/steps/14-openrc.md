@@ -62,7 +62,14 @@ setenv bootargs earlycon=sbi console=ttyS0 root=/dev/sda1 rootfstype=ext4 rootwa
 booti 0x40400000 - 0x40200000
 ```
 
-BOARD, Alpine's shell. First the clock, with the time the PC printed, because
+BOARD, Alpine's shell. Mount `/proc` first, because BusyBox `mount` reads
+`/proc/mounts` for the read-only remount at the end of this section:
+
+```sh
+mount -t proc proc /proc
+```
+
+Then the clock, with the time the PC printed, because
 every file written in this session gets that time as its date. The tree has
 no time zone set, so the system clock is UTC:
 
@@ -140,7 +147,8 @@ Each `rc-update add` creates a link in `/etc/runlevels/<runlevel>/` to the
 script in `/etc/init.d/`. `rc-update show` lists every enabled service with its
 runlevel.
 
-Close the file system and reset, as in step 13:
+Close the file system and reset, as in step 13 (without `/proc` mounted,
+the remount fails with `mount: can't read '/proc/mounts'`):
 
 ```sh
 sync
