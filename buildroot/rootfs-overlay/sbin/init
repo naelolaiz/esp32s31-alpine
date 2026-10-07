@@ -1,0 +1,28 @@
+#!/bin/sh
+# /sbin/init of the Buildroot root file system in flash (cramfs).
+# Boots Alpine from the USB stick when one is plugged in, otherwise starts
+# Buildroot's BusyBox init as before. Guide: docs/steps/14b-boot-from-stick.md
+
+# Wait for the stick: it appears about 1.6 s after this script starts.
+tries=5
+while [ ! -b /dev/sda1 ] && [ "$tries" -gt 0 ]; do
+	sleep 1
+	tries=$((tries - 1))
+done
+
+if [ -b /dev/sda1 ] && mount -t ext4 -o rw /dev/sda1 /mnt; then
+	if [ -f /mnt/etc/alpine-release ] && mount -t devtmpfs devtmpfs /mnt/dev; then
+		echo "init: Alpine found on /dev/sda1, switching to it"
+		cd /mnt
+		if pivot_root . mnt; then
+			umount -l /mnt
+			exec chroot . /sbin/init <dev/console >dev/console 2>&1
+		fi
+		cd /
+		umount /mnt/dev
+	fi
+	umount /mnt
+fi
+
+echo "init: no Alpine stick, starting Buildroot"
+exec /bin/busybox init

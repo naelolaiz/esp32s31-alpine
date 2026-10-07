@@ -81,11 +81,18 @@ Done when: OpenRC boots in QEMU and the chroot builds packages bootstrap.sh does
 13. **Alpine root on a pendrive** (microSD once step 5 is done). ext4 partition from
     `apk --root --arch riscv32 --initdb`; boot `root=/dev/sda1 rootwait init=/bin/sh`,
     set with `setenv bootargs` at the U-Boot prompt (U-Boot's environment is not saved,
-    so a reset boots Buildroot's cramfs, the rescue system). The device tree's
-    `bootargs` changes once Alpine boots to a login.
+    so a reset boots Buildroot's cramfs, the rescue system). Step 14b replaces the
+    typing at the U-Boot prompt.
 14. **OpenRC.** sysfs, devfs, dmesg, swclock (no RTC), hostname, bootmisc, local, and a
     getty on the console found in step 2; login prompt. mdev moves to step 16: its
     OpenRC service needs `CONFIG_UEVENT_HELPER`, which this kernel lacks.
+
+    14b. **Boot from the stick automatically** (added 2026-10-07: stopping U-Boot
+    with a key is unreliable). A Buildroot overlay replaces `/sbin/init` in the
+    cramfs with a script: if `/dev/sda1` appears within 5 s and holds an Alpine
+    root, it switches to it with `pivot_root`; otherwise it starts Buildroot's
+    BusyBox init. The device tree's `bootargs` stay Espressif's, so a reset
+    without the stick still boots the rescue system.
 15. **Network and apk.** Ethernet via OpenRC; repository served over HTTP from the
     PC; `apk update`, `apk add nano`, signature verified.
 16. **Pendrive hotplug.** mdev as a netlink daemon (`mdev -d`), with an mdev rule or

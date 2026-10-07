@@ -26,6 +26,7 @@ as the work happens.
 | `bsp/` | Pinned Espressif BSP versions and how to build the baseline |
 | `kernel/fragments/` | Kconfig fragments applied on top of `esp32s31_minimal_defconfig` |
 | `kernel/patches/` | Patches against Espressif's `integration/v6.18-esp32s31` kernel |
+| `buildroot/rootfs-overlay/` | Files added to Espressif's Buildroot root file system (the `/sbin/init` that boots Alpine from the stick) |
 | `dts/` | Device tree changes (for example the SDMMC node) |
 | `scripts/` | Rootfs, image and flash scripts |
 | `ci/` | QEMU and hardware test automation |

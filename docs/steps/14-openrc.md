@@ -234,7 +234,8 @@ OpenRC runs the shutdown runlevel: `killprocs`, `savecache`, swclock saving
 the time, `mount-ro`. Tap **RST** once `mount-ro` has reported
 `Remounting remaining filesystems read-only` and the kernel has printed its
 last line. A plain reset boots Buildroot; booting Alpine again means stopping
-U-Boot and typing the two lines from section 3.
+U-Boot and typing the two lines from section 3. Step 14b removes that typing:
+[14b-boot-from-stick.md](14b-boot-from-stick.md).
 
 Done when: OpenRC boots to `esp32s31 login:`, root logs in, and the RAM
 numbers are recorded.
