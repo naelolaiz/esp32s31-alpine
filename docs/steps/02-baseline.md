@@ -36,6 +36,44 @@ venv/bin/esptool --chip esp32s31 --port /dev/ttyUSB0 --baud 1152000 \
 
 Use `--baud 460800` if it fails mid-write.
 
+### Flashing less
+
+`s31_full_flash.bin` is the five slots of the flash layout (SPL, U-Boot,
+device tree, kernel, root file system) merged with
+`esptool merge-bin --format raw`, which fills the gaps between them with
+0xFF. Roughly half of its 16 MB is that filling (estimated from the file
+sizes), and esptool erases and writes
+it like real data. esptool prints a hint about this during the build. Two
+ways to write less, both from the `images/` directory of the Buildroot output
+directory, after a build.
+
+A HEX file holds only the five regions, each with its address, so
+`write-flash` writes only those (the `0x0` is ignored for a HEX file). The
+first command checks that the five files exist under these names; the
+second merges them with the flash settings the BSP's layout file uses (DIO at
+80 MHz is required by the ROM):
+
+```sh
+ls -l spl_app.bin u-boot.itb esp32s31.dtb xipImage rootfs.cramfs
+esptool --chip esp32s31 merge-bin -o s31_full_flash.hex --format hex --flash-mode dio --flash-freq 80m --flash-size 16MB 0x2000 spl_app.bin 0x100000 u-boot.itb 0x300000 esp32s31.dtb 0x500000 xipImage 0xc00000 rootfs.cramfs
+esptool --chip esp32s31 --port /dev/ttyUSB0 --baud 1152000 write-flash 0x0 s31_full_flash.hex
+```
+
+When only one part changed, write only its slot, because the other slots in
+flash already hold the same data. After a root file system change:
+
+```sh
+esptool --chip esp32s31 --port /dev/ttyUSB0 --baud 1152000 write-flash 0xc00000 rootfs.cramfs
+```
+
+After a kernel change:
+
+```sh
+esptool --chip esp32s31 --port /dev/ttyUSB0 --baud 1152000 write-flash 0x500000 xipImage
+```
+
+The offsets come from `configs/esp32s31-layout.cfg` in esp-linux-bsp.
+
 ## 3. Boot and look around
 
 Open the console at 115200 with pyserial's terminal (installed with esptool;
