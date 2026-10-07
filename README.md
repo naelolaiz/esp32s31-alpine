@@ -14,6 +14,7 @@ as the work happens.
 ## Where to start
 
 - [Plan](docs/plan.md): 24 steps in six phases, in dependency order.
+- [Steps](docs/steps/README.md): every step with its guide and journal entry, including steps 7 to 11, whose guides are in alpine-riscv32.
 - [Ground truth](docs/ground-truth.md): verified facts about the chip, the BSP and Alpine, with sources.
 - [Journal](docs/journal/): dated notes, newest last.
 - [BSP versions](bsp/versions.md): the Espressif branches and commits we build from.
