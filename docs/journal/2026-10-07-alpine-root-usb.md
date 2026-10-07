@@ -203,11 +203,37 @@ Percpu:               32 kB
   which turns `SLAB_RECLAIM_ACCOUNT` into a no-op (`include/linux/slab.h`).
   The dentry and inode caches can still be shrunk; they are only counted as
   unreclaimable.
-- The unattributed part is most likely memory that drivers and the block
-  layer take straight from the page allocator, which no meminfo line counts
-  (inferred, not measured). A comparison under Buildroot with the same kernel,
-  with and without the ext4 partition mounted, separates what mounting ext4
-  adds.
+- The unattributed part is memory no meminfo line counts, for example pages
+  drivers take straight from the page allocator (inferred).
+
+Comparison under Buildroot, same kernel, stick plugged in, about 8 s after
+boot, before and after `mount -t ext4 -o ro /dev/sda1 /mnt`:
+
+| KiB | Buildroot, stick in | Buildroot, ext4 mounted ro | Alpine shell, ext4 root rw |
+| --- | --- | --- | --- |
+| `MemFree` | 11432 | 10708 | 3396 |
+| `MemAvailable` | 10964 | 10564 | 8836 |
+| `Buffers` + `Cached` | 532 | 1192 | 6896 |
+| `Slab` | 1268 | 1320 | 1348 |
+| `KernelStack` | 200 | 224 | 216 |
+| `AnonPages` | 132 | 128 | 96 |
+| `PageTables` + `Percpu` + `VmallocUsed` | 148 | 148 | 132 |
+| used (Total − Free − Buffers − Cached) | 2772 | 2836 | 4444 |
+| not attributed | 1024 | 1016 | 2652 |
+
+- Mounting ext4 costs 656 KiB of buffer cache, which is reclaimable, and 64
+  KiB that is not: 52 KiB of slab and 24 KiB of kernel stacks (the journal and
+  ext4 worker threads, inferred).
+- About 1 MiB is unattributed under Buildroot as well.
+- The Alpine run has 1.6 MiB more unattributed memory. Not identified;
+  candidates are the per-CPU lists of free pages, which `MemFree` does not
+  count and which fill after a burst of frees such as apk exiting, and the
+  journal running read-write. `/proc/zoneinfo` shows the per-CPU lists; to be
+  measured in step 14 with OpenRC running.
+- The read-only mount printed `EXT4-fs (sda1): orphan cleanup on readonly fs`:
+  ext4 found an unfinished delete or truncate in its orphan list, left by the
+  Alpine session that ended with a remount instead of a clean shutdown, and
+  completed it (inferred).
 
 The remount before the reset:
 
