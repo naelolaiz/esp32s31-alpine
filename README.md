@@ -32,4 +32,4 @@ as the work happens.
 
 ## Status
 
-Phase 1 done. Steps 4 and 6 done: our own kernel with the block layer, ext4, vfat, exFAT and USB pendrives. Steps 7 to 11 done: riscv32 cross toolchain, the Alpine base system built from our own repository, Alpine riscv32 booting to an OpenRC login in qemu-system-riscv32 with Linux 6.18, and a native riscv32 build container that built nano and dropbear, with SSH logins working in the VM ([journal](docs/journal/)). Step 5 (microSD) is parked. Next: Phase 4, step 12, Alpine binaries on the board.
+Phase 1 done. Steps 4 and 6 done: our own kernel with the block layer, ext4, vfat, exFAT and USB pendrives. Steps 7 to 11 done: riscv32 cross toolchain, the Alpine base system built from our own repository, Alpine riscv32 booting to an OpenRC login in qemu-system-riscv32 with Linux 6.18, and a native riscv32 build container that built nano and dropbear, with SSH logins working in the VM ([journal](docs/journal/)). Step 5 (microSD) is parked. Step 12 done: Alpine's static and dynamic BusyBox run on the board under Buildroot. Next: step 13, the Alpine root file system on a USB stick.
