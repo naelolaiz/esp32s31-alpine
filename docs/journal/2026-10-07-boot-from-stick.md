@@ -80,6 +80,19 @@ with `rootwait`: the script checks `/dev/sda1` once a second (at about 1.45,
 and the mount itself took longer than in step 13 (inferred from the
 timestamps; not measured separately).
 
+## Boot without the stick
+
+Stick unplugged, reset:
+
+```
+[    1.451390] Run /sbin/init as init process
+init: no Alpine stick, starting Buildroot
+```
+
+The message came after the script's five checks, and Enter on the console
+gave Buildroot's `#` prompt, so BusyBox init ran Espressif's `inittab` as
+before. Both paths work on the board.
+
 ## Faster flashing
 
 The BSP's packaging (`tools/gen_esp_flash_image.sh` in esp-linux-bsp) builds
@@ -100,5 +113,4 @@ The commands are in step 2's guide,
 
 ## Next
 
-Reset without the stick, to see the fallback to Buildroot on the board.
-Then step 15: Ethernet and apk.
+Step 15: Ethernet and apk.
