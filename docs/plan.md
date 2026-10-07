@@ -63,9 +63,12 @@ pendrive as the root device until it comes back.
    under qemu-user.
 10. **Full-system QEMU.** Mainline 6.18 `rv32_defconfig` plus virtio under
     `qemu-system-riscv32 -M virt`; OpenRC to a login; `apk add` from the local repo.
-11. **Native build chroot.** riscv32 chroot with qemu-user binfmt; abuild builds
-    dropbear, curl, ca-certificates, iproute2, e2fsprogs, exfatprogs, strace,
-    gdbserver, nano.
+11. **Native build chroot.** riscv32 container with qemu-user binfmt; abuild builds
+    nano and dropbear (ca-certificates came with step 9). curl, iproute2,
+    e2fsprogs, exfatprogs, strace and gdbserver are deferred: together they pull
+    in about 145 more packages (python3, cmake, elfutils, glib), mostly for
+    documentation and optional features, so they wait for patches that trim
+    those dependencies (decided 2026-10-07).
 
 Done when: OpenRC boots in QEMU and the chroot builds packages bootstrap.sh does not.
 
@@ -80,7 +83,7 @@ Done when: OpenRC boots in QEMU and the chroot builds packages bootstrap.sh does
 14. **OpenRC.** devfs, dmesg, mdev, hostname, bootmisc, local and a getty on the
     console found in step 2; login prompt.
 15. **Network and apk.** Ethernet via OpenRC; repository served over HTTP from the
-    PC; `apk update`, `apk add curl`, signature verified.
+    PC; `apk update`, `apk add nano`, signature verified.
 16. **Pendrive hotplug.** mdev rule or OpenRC service mounting sticks under `/media`.
 17. **SSH.** Dropbear with devpts; `rc-update add dropbear default`.
 
