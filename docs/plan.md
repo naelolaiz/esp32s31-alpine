@@ -110,6 +110,9 @@ if both fail, Alpine in the 4 MiB cramfs with apk-tools built against mbedtls.
 19. **Study the native design.** Community chain (ROM, ESP-IDF second stage,
     loader, OpenSBI, Linux) versus Espressif's (ROM, SPL, OpenSBI, U-Boot, Linux).
     Decide: port into Espressif's chain or switch. Record why in the journal.
+    Study done: [journal](journal/2026-10-07-native-wifi-study.md). Recommended:
+    keep Espressif's chain and run the ESP-IDF Wi-Fi libraries inside Linux, as
+    GrieferPig's 6.18 port does; steps 20 to 22 are rewritten once Juan decides.
 20. **Hart 0 firmware.** Reserve hart 0 and the shared SRAM window in OpenSBI and
     the device tree; ESP-IDF Wi-Fi firmware on hart 0, Linux on hart 1.
     The `esp32s31-wifi` repository starts here.
@@ -143,7 +146,7 @@ Done when: the board reaches the repository over Wi-Fi with Ethernet unplugged.
 - [ ] `reboot` and `poweroff` end with the board halted; only RST restarts it. Espressif's OpenSBI handles every SBI SRST request by setting the HP core 0 software reset bit (`LP_AONCLKRST_HPCORE0_RESET_CTRL_REG` bit 20), and the chip does not come back from it (step 15).
 - [ ] The network costs about 960 KiB of available RAM, 756 KiB of it in no `/proc/meminfo` counter; check whether it is the Ethernet driver's receive buffers (compare `MemFree` around `ifdown eth0`, step 15).
 - [ ] Why 100 Mbps on a gigabit PHY? Check on a known gigabit port.
-- [x] Does the core implement the F extension? No: the hart reports `rv32imac_zicsr_zifencei_zaamo_zalrsc_zca` (step 2).
+- [ ] Does the core implement the F extension? Step 2 said no, but `/proc/cpuinfo` only repeats the device tree. Espressif's ESP32-S31 Wi-Fi libraries are built `rv32imafc` with the single-float ABI, so F without D is likely (step 19 journal); confirm on the board.
 - [ ] Can the flash layout give the rootfs more than 4 MiB? Kernel slot is 7 MiB (0x500000 to 0xC00000) with the kernel at 3.7 MiB, so moving `SLOT_ROOTFS` down is possible (layout in ground-truth.md).
 - [x] Does libucontext support riscv32? Upstream has `arch/riscv32`; aports passes `ARCH=$CARCH`, so no aports change expected (check the 1.5.2 tarball in step 8).
 - [ ] Buildroot forces `CONFIG_BLK_DEV_INITRD=y` (kconfig fixup in `linux/linux.mk`, confirmed: the defconfig sets `BR2_TARGET_ROOTFS_CPIO=y` with gzip), which pulls in all initramfs decompressors. Drop the cpio image to save kernel flash, once nothing on the board needs it.
