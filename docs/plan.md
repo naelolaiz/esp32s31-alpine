@@ -72,7 +72,8 @@ Done when: OpenRC boots in QEMU and the chroot builds packages bootstrap.sh does
 ## Phase 4: Alpine on the board
 
 12. **Alpine binaries on Buildroot.** `busybox-static`, then dynamic BusyBox with
-    `/lib/ld-musl-riscv32.so.1`, from the Buildroot shell.
+    `/lib/ld-musl-riscv32-sf.so.1` (soft-float loader name), from the Buildroot shell.
+    Check first whether Buildroot's musl uses the same name: `ls /lib/ld-musl*`.
 13. **Alpine root on a pendrive** (microSD once step 5 is done). ext4 partition from
     `apk --root --arch riscv32 --initdb`; boot `root=/dev/sda2 rootwait init=/bin/sh`. Buildroot cramfs stays in
     flash as the rescue system.

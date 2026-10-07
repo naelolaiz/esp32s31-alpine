@@ -32,4 +32,4 @@ as the work happens.
 
 ## Status
 
-Phase 1 done. Steps 4 and 6 done: our own kernel with the block layer, ext4, vfat, exFAT and USB pendrives ([journal](docs/journal/)). Step 5 (microSD) is parked until a breakout is available. Next: Phase 3, Alpine riscv32 on the host.
+Phase 1 done. Steps 4 and 6 done: our own kernel with the block layer, ext4, vfat, exFAT and USB pendrives. Steps 7 and 8 done: riscv32 cross toolchain, hello world runs under qemu ([journal](docs/journal/)). Step 5 (microSD) is parked. Next: step 9, the Alpine base packages.
