@@ -32,4 +32,4 @@ as the work happens.
 
 ## Status
 
-Phase 1 done. Steps 4 and 6 done: our own kernel with the block layer, ext4, vfat, exFAT and USB pendrives. Steps 7 to 9 done: riscv32 cross toolchain and the Alpine base system (alpine-base, busybox, apk-tools, openrc) built from our own repository, with busybox and apk running under qemu-user ([journal](docs/journal/)). Step 5 (microSD) is parked. Next: step 10, booting it in qemu-system-riscv32.
+Phase 1 done. Steps 4 and 6 done: our own kernel with the block layer, ext4, vfat, exFAT and USB pendrives. Steps 7 to 10 done: riscv32 cross toolchain, the Alpine base system built from our own repository, and Alpine riscv32 booting to an OpenRC login in qemu-system-riscv32 with Linux 6.18 ([journal](docs/journal/)). Step 5 (microSD) is parked. Next: step 11, a native riscv32 build environment for the packages the board needs (dropbear, curl, e2fsprogs, ...).
