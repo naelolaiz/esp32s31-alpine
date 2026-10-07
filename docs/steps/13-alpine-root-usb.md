@@ -148,16 +148,21 @@ repartitioned:
 sudo umount /dev/sdX1
 ```
 
-Then wipe, partition and format. HOST:
+Then wipe, partition and format. The `wipefs` line names every partition
+`lsblk` listed, then the disk; this example is for a stick with two
+partitions, such as a Ventoy stick. HOST:
 
 ```sh
-sudo wipefs -a /dev/sdX
+sudo wipefs -a /dev/sdX1 /dev/sdX2 /dev/sdX
 printf 'label: dos\nsize=2GiB, type=83\n' | sudo sfdisk /dev/sdX
 sudo mkfs.ext4 -L alpine-root -E lazy_itable_init=0,lazy_journal_init=0 /dev/sdX1
 ```
 
-- `wipefs -a` erases the signatures of the old partition table, so no tool,
-  and not the board's kernel, finds the old layout any more.
+- `wipefs -a` erases the signatures of the old file systems and of the old
+  partition table, so no tool, and not the board's kernel, finds the old
+  layout any more. The partitions go first because the new partition
+  usually starts at the same 1 MiB as the old first one, so mkfs would
+  otherwise find the old file system inside it.
 - `sfdisk` reads the new table from its input. `label: dos` is an MBR
   table; the kernel reads MBR and GPT alike (`MSDOS_PARTITION` and
   `EFI_PARTITION`, step 6). One partition of 2 GiB, starting at sfdisk's
