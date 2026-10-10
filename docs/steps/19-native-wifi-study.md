@@ -32,14 +32,17 @@ the serial log is the only place to read it.
 
 ## 2. Capture the OpenSBI banner
 
-HOST, in the directory you keep boot logs in, with the esptool venv active
-(pyserial comes with esptool, step 2). `script` copies everything the
-terminal shows into the file, so nothing has to be copied by hand from the
-scrollback. The console is on `/dev/ttyUSB1` since step 15; check with
-`ls /dev/ttyUSB*` if it moved:
+HOST, in the directory that holds the clone of this repository (one level
+above it), so the log stays outside the clone and can never be committed.
+The command runs the venv's Python by its path, so the venv does not have to
+be activated; pyserial, which provides miniterm, was installed in it
+together with esptool. `script` copies everything the terminal shows into
+the file, so nothing has to be copied by hand from the scrollback. The
+console is on `/dev/ttyUSB1` since step 15; check with `ls /dev/ttyUSB*` if
+it moved:
 
 ```sh
-script -c "python3 -m serial.tools.miniterm --raw /dev/ttyUSB1 115200" boot-step19.log
+script -c "esp32s31-alpine/.venv/bin/python -m serial.tools.miniterm --raw /dev/ttyUSB1 115200" boot-step19.log
 ```
 
 BOARD: tap **RST**. The banner comes right after the SPL lines. Let the
@@ -149,12 +152,22 @@ and the stick now holds the Alpine root with everything installed on it
 (htop, vim, mc, python3 and their libraries), which should not depend on code
 we have not read closely.
 
+The commands below call `esptool` by name, so activate its venv in every
+terminal you use for them first. HOST, in the directory of section 2:
+
+```sh
+. esp32s31-alpine/.venv/bin/activate
+```
+
+The venv stays active after `cd`, so the commands below work from the
+directories they name.
+
 ### Back up the flash
 
 The step 14 backup no longer matches the board: steps 14b and 15 changed
-the root file system slot, so take a fresh one. Put the board in download mode (hold **BOOT**,
-tap **RST**, release **BOOT**), because esptool can only read the flash
-through the ROM's download mode.
+the root file system slot, so take a fresh one. Put the board in download
+mode (hold **BOOT**, tap **RST**, release **BOOT**), because esptool can
+only read the flash through the ROM's download mode.
 
 HOST, in the Buildroot output directory, next to the step 14 backup. This
 reads all 16 MiB (0x1000000 bytes) from offset 0:
@@ -180,10 +193,10 @@ esptool --chip esp32s31 --port /dev/ttyUSB1 --baud 1152000 erase-flash
 esptool --chip esp32s31 --port /dev/ttyUSB1 --baud 1152000 write-flash --flash-mode dio --flash-freq 80m --flash-size 16MB 0x0 s31_full_flash.bin
 ```
 
-HOST, log directory, then tap **RST**:
+HOST, in the same directory as in section 2, then tap **RST**:
 
 ```sh
-script -c "python3 -m serial.tools.miniterm --raw /dev/ttyUSB1 115200" boot-grieferpig.log
+script -c "esp32s31-alpine/.venv/bin/python -m serial.tools.miniterm --raw /dev/ttyUSB1 115200" boot-grieferpig.log
 ```
 
 BOARD, at `esp32-s31 login:`, log in as `root` with no password (his
