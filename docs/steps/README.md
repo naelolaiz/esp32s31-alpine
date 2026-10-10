@@ -33,7 +33,7 @@ A step with no guide was either short enough that its
 | 17 | SSH | | | planned |
 | 18 | Optional early Wi-Fi: USB dongle | | | planned |
 | 19 | Study the native Wi-Fi design | [19-native-wifi-study.md](19-native-wifi-study.md) | [native Wi-Fi study](../journal/2026-10-07-native-wifi-study.md), [board checks](../journal/2026-10-10-native-wifi-board-checks.md) | done |
-| 20 | SRAM and FPU for the radio | [20-sram-and-fpu.md](20-sram-and-fpu.md) (part 1: DMA pool) | | DMA pool test next |
+| 20 | SRAM and FPU for the radio | [20-sram-and-fpu.md](20-sram-and-fpu.md) (part 1: DMA pool) | [DMA pool](../journal/2026-10-10-dma-pool.md) | DMA pool done; FPU next |
 | 21 | Radio driver | | | planned |
 | 22 | Alpine Wi-Fi | | | planned |
 | 23 | Reproducible builds | | | planned |
