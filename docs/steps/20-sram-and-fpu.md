@@ -227,30 +227,70 @@ did not start, and with it how much more pool it needs.
 
 The same change as a kernel patch is
 [kernel/patches/0001-riscv-dts-esp32s31-shrink-the-DMA-pool.patch](../../kernel/patches/0001-riscv-dts-esp32s31-shrink-the-DMA-pool.patch).
-Do this after section 4 passed: Buildroot applies kernel patches only when
-it unpacks the kernel source, so it rebuilds the whole kernel.
+Buildroot applies kernel patches only when it unpacks the kernel source, so
+this rebuilds the whole kernel. Part 2 adds more kernel patches, so do this
+section once, when part 2 is ready, and the kernel is rebuilt only once.
 
-HOST, in the Buildroot output directory. Open Buildroot's configuration:
+### Keep the kernel options from steps 4 and 6
+
+Unpacking the kernel again also throws away its configuration in the build
+directory, and Buildroot makes a new one from Espressif's defconfig plus the
+fragments named in `BR2_LINUX_KERNEL_CONFIG_FRAGMENT_FILES`. Step 6 set the
+USB storage options in `linux-menuconfig`, which only changed the build
+directory. If the fragments are not named, the new kernel has no USB storage,
+cannot mount the stick, and the board falls back to Buildroot.
+
+HOST, in the Buildroot output directory. The first command keeps a copy of
+today's kernel configuration to compare against after the rebuild; the
+second shows which fragments Buildroot applies:
+
+```sh
+cp build/linux-*/.config kernel-config-before-step20
+grep BR2_LINUX_KERNEL_CONFIG_FRAGMENT_FILES .config
+```
+
+The line must name both `kernel/fragments/10-block.config` and
+`kernel/fragments/20-usb-storage.config` of your clone, with absolute paths.
+If it is empty or misses one, set it in the next step.
+
+### Name the patches and the fragments
+
+HOST, same directory. Open Buildroot's configuration:
 
 ```sh
 make menuconfig
 ```
 
-In **Kernel → Custom kernel patches** (`BR2_LINUX_KERNEL_PATCH`), enter the
-absolute path of `kernel/patches` in your clone of this repository. Buildroot
-applies every `*.patch` in that directory, in name order. Save and exit.
+- **Kernel → Custom kernel patches** (`BR2_LINUX_KERNEL_PATCH`): the absolute
+  path of `kernel/patches` in your clone of this repository. Buildroot
+  applies every `*.patch` in that directory, in name order.
+- **Kernel → Additional configuration fragment files**
+  (`BR2_LINUX_KERNEL_CONFIG_FRAGMENT_FILES`), only if the `grep` above
+  missed one: the absolute paths of `kernel/fragments/10-block.config` and
+  `kernel/fragments/20-usb-storage.config`, separated by a space.
+
+Save and exit.
+
+### Rebuild and compare
 
 HOST, same directory. `linux-dirclean` deletes the unpacked kernel, so the
-next `make` unpacks it again from the download cache, applies the patch and
-builds the kernel, the DTB and the flash image:
+next `make` unpacks it again from the download cache, applies the patches
+and the fragments, and builds the kernel, the DTB and the flash image:
 
 ```sh
 make linux-dirclean
 make
+diff kernel-config-before-step20 build/linux-*/.config
 build/linux-*/scripts/dtc/dtc -I dtb -O dts images/esp32s31.dtb | grep -A5 'dma-pool@'
 ```
 
-The last command should show `dma-pool@2f073000` with
-`reg = <0x2f073000 0x5000>`, from the DTB Buildroot just built. Flash it at
-0x300000 as in section 3, with `images/esp32s31.dtb` as the file. The kernel
-code did not change, so the 0x500000 slot can stay as it is.
+- `diff` compares the kernel configuration before and after. With patch
+  0001 alone it should print nothing, since a device tree patch changes no
+  option. Any `CONFIG_` line it prints is an option that was set by hand and
+  is not in the fragments; paste it before flashing.
+- The last command should show `dma-pool@2f073000` with
+  `reg = <0x2f073000 0x5000>`, from the DTB Buildroot just built.
+
+Flash it at 0x300000 as in section 3, with `images/esp32s31.dtb` as the
+file. With patch 0001 alone the kernel code did not change, so the 0x500000
+slot can stay as it is.
