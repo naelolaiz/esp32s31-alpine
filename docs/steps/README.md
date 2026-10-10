@@ -33,8 +33,8 @@ A step with no guide was either short enough that its
 | 17 | SSH | | | planned |
 | 18 | Optional early Wi-Fi: USB dongle | | | planned |
 | 19 | Study the native Wi-Fi design | [19-native-wifi-study.md](19-native-wifi-study.md) | [native Wi-Fi study](../journal/2026-10-07-native-wifi-study.md) | board checks next |
-| 20 | Hart 0 firmware | | | planned |
-| 21 | Linux Wi-Fi driver | | | planned |
+| 20 | SRAM and FPU for the radio | | | planned |
+| 21 | Radio driver | | | planned |
 | 22 | Alpine Wi-Fi | | | planned |
 | 23 | Reproducible builds | | | planned |
 | 24 | Upstream | | | planned |
