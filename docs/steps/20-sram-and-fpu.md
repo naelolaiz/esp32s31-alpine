@@ -371,16 +371,19 @@ and the fragments, and builds the kernel, the DTB and the flash image:
 make linux-dirclean
 make
 diff kernel-config-before-step20 build/linux-*/.config
-build/linux-*/scripts/dtc/dtc -I dtb -O dts images/esp32s31.dtb | grep -E 'dma-pool@|reg = <0x2f07|riscv,isa'
+build/linux-*/scripts/dtc/dtc -I dtb -O dts images/esp32s31.dtb | grep -E 'dma-pool@|riscv,isa'
 ```
 
 - `diff` compares the kernel configuration before and after. Expect only
   `CONFIG_FPU_F_ONLY=y`, the new option from patch 0002. Any other `CONFIG_`
   line is an option that was set by hand and is not in the fragments; paste
   it before flashing.
-- The last command should show `dma-pool@2f073000`,
-  `reg = <0x2f073000 0x5000>` and `riscv,isa = "rv32imafc_zicsr_zifencei"`
-  from the DTB Buildroot just built.
+- The last command should show `dma-pool@2f073000` and
+  `riscv,isa = "rv32imafc_zicsr_zifencei"` from the DTB Buildroot just built.
+  It leaves out the pool's `reg`: its bytes (`2f 07 30 00 00 00 50 00`)
+  happen to look like text, so the decompiler prints them as strings, such
+  as `reg = "/\a0", "", "", "P";`. The board shows the real values in
+  section 9.
 
 ## 9. Flash and check
 
@@ -404,12 +407,13 @@ BOARD, Alpine logged in as root. The first two show what the kernel made of
 the ISA, the third runs the test:
 
 ```sh
-dmesg | grep -i -E 'isa|F but not D'
+dmesg | grep -i -E 'reserved mem|isa|F but not D'
 grep isa /proc/cpuinfo
 /root/fpu-test
 ```
 
-- Expect `riscv: base ISA extensions acfim` and no `F but not D` line.
+- Expect the pool line `0x2f073000..0x2f077fff (20 KiB)` as in part 1,
+  `riscv: base ISA extensions acfim`, and no `F but not D` line.
 - `/proc/cpuinfo` should list `rv32imafc_zicsr_zifencei`.
 - `fpu-test` should print two `process N: ... in all 5 rounds` lines with the
   same values as in QEMU, and `OK`.
