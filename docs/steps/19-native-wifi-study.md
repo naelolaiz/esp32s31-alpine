@@ -14,64 +14,76 @@ about 282 KiB of internal SRAM (0x2F030000 to 0x2F07CFB0) plus the F
 
 | Question | Why it matters | Section |
 | --- | --- | --- |
-| How much internal SRAM does our OpenSBI take, and what does it lock away from Linux? | The radio needs SRAM above 0x2F030000; an M-mode-only region there would fault the driver. | 2 |
+| How much internal SRAM does our OpenSBI take? | The radio needs SRAM from 0x2F030000; OpenSBI's own region is closed to Linux. | 2 |
 | Does our OpenSBI already start hart 1? | Espressif added that on 2026-10-06; it decides whether SMP is possible later without touching OpenSBI. | 2 |
 | What does our kernel reserve, and which options are already on? | The 256 KiB DMA pool sits where the radio needs SRAM; `CONFIG_FPU`, modules and wireless decide the kernel work. | 3, 4 |
 
 Nothing here changes the board. Section 5 is optional and replaces the whole
 flash for a while, with a backup first.
 
-## 1. What OpenSBI prints, and why we read it
+## 1. Why OpenSBI is read from the PC
 
-OpenSBI is the M-mode firmware between U-Boot SPL and U-Boot. At start-up it
-prints a banner that describes itself: where it is in memory, which
+OpenSBI is the M-mode firmware between U-Boot SPL and U-Boot. Upstream
+OpenSBI prints a banner at start-up with where it sits in memory, which
 platform drivers it found, and the memory regions it protects with PMP
 (Physical Memory Protection, the RISC-V mechanism M-mode uses to fence off
-memory from S-mode and U-mode). Linux never sees that banner after boot, so
-the serial log is the only place to read it.
+memory from S-mode and U-mode).
 
-## 2. Capture the OpenSBI banner
+Espressif's boot does not show that banner. A full boot log has only the
+platform's own line between SPL and U-Boot:
 
-HOST, in the directory that holds the clone of this repository (one level
-above it), so the log stays outside the clone and can never be committed.
-The command runs the venv's Python by its path, so the venv does not have to
-be activated; pyserial, which provides miniterm, was installed in it
-together with esptool. `script` copies everything the terminal shows into
-the file, so nothing has to be copied by hand from the scrollback. The
-console is on `/dev/ttyUSB1` since step 15; check with `ls /dev/ttyUSB*` if
-it moved:
+```
+Trying to boot from NOR
+OpenSBI: ESP32-S31 firmware active
 
-```sh
-script -c "esp32s31-alpine/.venv/bin/python -m serial.tools.miniterm --raw /dev/ttyUSB1 115200" boot-step19.log
+
+U-Boot 2024.07 (...)
 ```
 
-BOARD: tap **RST**. The banner comes right after the SPL lines. Let the
-board boot to the login, log in, and leave miniterm open for section 3.
+The likely reason is U-Boot SPL: it starts OpenSBI's `fw_dynamic` firmware
+with an options word, and U-Boot's default for it
+(`CONFIG_SPL_OPENSBI_SCRATCH_OPTIONS=0x1`) is "no boot prints" (inferred from
+U-Boot's defaults, not checked in Espressif's SPL config). Changing that
+would mean changing the boot stack, so the same facts are read from the
+OpenSBI binary that Buildroot built instead.
 
-HOST, in another terminal, same directory. This prints the banner lines
-that matter:
+## 2. Read OpenSBI's build
+
+HOST, in the Buildroot output directory of your Espressif build (the one
+with `images/` and `build/`):
 
 ```sh
-grep -a -E 'OpenSBI v|Platform (Name|HSM|Console)|Firmware (Base|Size|RW)|Domain0 Region|Boot HART|Runtime SBI' boot-step19.log
+grep -a -o esp32s31-hsm images/u-boot.itb
+readelf -lW $(find build -name fw_dynamic.elf | head -1)
 ```
 
-What each line tells us:
-
-- `Platform HSM Device`: `esp32s31-hsm` means this OpenSBI has Espressif's
-  hart 1 start code; `---` means it was fetched before 2026-10-06.
-- `Firmware Base` and `Firmware Size`: OpenSBI's own SRAM. It must end
-  below 0x2F030000 for the radio layout to fit.
-- `Domain0 RegionNN`: each line is one PMP region. `M:` lists what M-mode
-  may do, `S/U:` what Linux and programs may do; `()` after `S/U:` means no
-  access at all. A region that covers addresses from 0x2F030000 upwards with
-  `S/U: ()` would block the radio.
-- `Boot HART Base ISA`: what OpenSBI reads from the hardware `misa` register,
-  unlike `/proc/cpuinfo`, which repeats the device tree. An `f` in it would
-  confirm the F extension on our chip (the journal explains why step 2's
-  "no FPU" was based on the device tree only). Not every OpenSBI build prints
-  it; that is fine.
+- `u-boot.itb` is the image flashed at 0x100000, and OpenSBI's
+  `fw_dynamic.bin` is inside it. The string `esp32s31-hsm` is the name of
+  Espressif's hart 1 start code (`hsm.c`, merged on 2026-10-06), so `grep`
+  printing it means our OpenSBI can start hart 1; printing nothing means the
+  branch was fetched before that.
+- `readelf -l` lists the program segments: `VirtAddr` is where each one is
+  loaded and `MemSiz` how much memory it takes, including the zeroed data
+  (BSS) that the file does not store. The highest `VirtAddr + MemSiz` is
+  where OpenSBI's SRAM ends; it must stay below 0x2F030000 for the radio
+  layout to fit. The host's own `readelf` reads RISC-V files, so the
+  toolchain's is not needed.
+- OpenSBI's default PMP setup fences off only its own image from S-mode and
+  leaves the rest open, and Espressif's platform code adds no regions (read
+  from its source, not checked on the board). So the end address from
+  `readelf` is also the edge of what Linux may not touch.
 
 ## 3. What Linux reserved
+
+Open the board's console first. HOST, in the directory that holds the clone
+of this repository (one level above it). This runs miniterm with the venv's
+Python by its path, so the venv does not have to be activated; pyserial,
+which provides miniterm, was installed in it together with esptool. The
+console is usually `/dev/ttyUSB0`; check with `ls /dev/ttyUSB*` if not:
+
+```sh
+esp32s31-alpine/.venv/bin/python -m serial.tools.miniterm --raw /dev/ttyUSB0 115200
+```
 
 BOARD, Alpine logged in as root. The first command shows the reserved
 memory regions the kernel found in the device tree and its bounce buffer
@@ -153,7 +165,8 @@ and the stick now holds the Alpine root with everything installed on it
 we have not read closely.
 
 The commands below call `esptool` by name, so activate its venv in every
-terminal you use for them first. HOST, in the directory of section 2:
+terminal you use for them first. HOST, in the directory that holds the
+clone of this repository (one level above it):
 
 ```sh
 . esp32s31-alpine/.venv/bin/activate
@@ -173,7 +186,7 @@ HOST, in the Buildroot output directory, next to the step 14 backup. This
 reads all 16 MiB (0x1000000 bytes) from offset 0:
 
 ```sh
-esptool --chip esp32s31 --port /dev/ttyUSB1 --baud 1152000 read-flash 0 0x1000000 s31_full_flash-step19.bin
+esptool --chip esp32s31 --port /dev/ttyUSB0 --baud 1152000 read-flash 0 0x1000000 s31_full_flash-step19.bin
 ls -l s31_full_flash-step19.bin
 ```
 
@@ -189,14 +202,16 @@ settings in a JFFS2 partition (`persist`) that must not start from our old
 bytes:
 
 ```sh
-esptool --chip esp32s31 --port /dev/ttyUSB1 --baud 1152000 erase-flash
-esptool --chip esp32s31 --port /dev/ttyUSB1 --baud 1152000 write-flash --flash-mode dio --flash-freq 80m --flash-size 16MB 0x0 s31_full_flash.bin
+esptool --chip esp32s31 --port /dev/ttyUSB0 --baud 1152000 erase-flash
+esptool --chip esp32s31 --port /dev/ttyUSB0 --baud 1152000 write-flash --flash-mode dio --flash-freq 80m --flash-size 16MB 0x0 s31_full_flash.bin
 ```
 
-HOST, in the same directory as in section 2, then tap **RST**:
+HOST, in the directory that holds the clone of this repository, so the log
+stays outside the clone, then tap **RST**. `script` copies everything the
+terminal shows into the file:
 
 ```sh
-script -c "esp32s31-alpine/.venv/bin/python -m serial.tools.miniterm --raw /dev/ttyUSB1 115200" boot-grieferpig.log
+script -c "esp32s31-alpine/.venv/bin/python -m serial.tools.miniterm --raw /dev/ttyUSB0 115200" boot-grieferpig.log
 ```
 
 BOARD, at `esp32-s31 login:`, log in as `root` with no password (his
@@ -232,7 +247,7 @@ Download mode again, then HOST, in the Buildroot output directory. Writing
 the 16 MiB backup puts every slot back, ours included:
 
 ```sh
-esptool --chip esp32s31 --port /dev/ttyUSB1 --baud 1152000 write-flash 0x0 s31_full_flash-step19.bin
+esptool --chip esp32s31 --port /dev/ttyUSB0 --baud 1152000 write-flash 0x0 s31_full_flash-step19.bin
 ```
 
 Plug the stick back in and tap **RST**: Alpine should boot from the stick
