@@ -15,7 +15,8 @@ In short:
 - Our OpenSBI cannot start hart 1. The radio design does not need it.
 - The kernel has `CONFIG_FPU=y`, no modules and no wireless stack.
 
-The optional section 5 (Wi-Fi with GrieferPig's image) was not run.
+The optional section 5 (Wi-Fi with GrieferPig's image) was run later the same
+day: [results](2026-10-10-grieferpig-trial.md).
 
 ## OpenSBI prints no banner
 

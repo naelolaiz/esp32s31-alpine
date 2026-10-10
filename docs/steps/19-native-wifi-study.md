@@ -208,10 +208,14 @@ esptool --chip esp32s31 --port /dev/ttyUSB0 --baud 1152000 write-flash --flash-m
 
 HOST, in the directory that holds the clone of this repository, so the log
 stays outside the clone, then tap **RST**. `script` copies everything the
-terminal shows into the file:
+terminal shows into the file. `--eol CR` makes Enter send only a carriage
+return: miniterm's default sends CR and LF, the board's terminal turns the
+CR into a newline, and the extra LF then answers the next prompt with an
+empty line. GrieferPig's password prompt fails on that with "The password
+must contain 8 to 63 bytes":
 
 ```sh
-script -c "esp32s31-alpine/.venv/bin/python -m serial.tools.miniterm --raw /dev/ttyUSB0 115200" boot-grieferpig.log
+script -c "esp32s31-alpine/.venv/bin/python -m serial.tools.miniterm --raw --eol CR /dev/ttyUSB0 115200" boot-grieferpig.log
 ```
 
 BOARD, at `esp32-s31 login:`, log in as `root` with no password (his
