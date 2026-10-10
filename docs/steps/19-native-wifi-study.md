@@ -88,6 +88,27 @@ grep isa /proc/cpuinfo
 - `possible` and `online` both `0` means Linux runs on hart 0 only, as the
   device tree with one `cpu@0` says.
 
+The kernel also exposes the device tree it booted with under
+`/proc/device-tree`, one directory per node and one file per property. That
+is the tree from the DTB slot (flash 0x300000) as the kernel received it,
+after U-Boot's changes, so it is the ground truth rather than the `.dts`
+source. BOARD, same shell. The first command lists every reservation, the
+second prints the pool's `reg` property, the third the ISA string the kernel
+was given:
+
+```sh
+ls /proc/device-tree/reserved-memory/
+hexdump -C /proc/device-tree/reserved-memory/dma-pool@2f030000/reg
+cat /proc/device-tree/cpus/cpu@0/riscv,isa; echo
+```
+
+- Device tree numbers are big-endian 32-bit cells. With one address cell and
+  one size cell, the `reg` dump should read `2f 03 00 00 00 04 00 00`: start
+  0x2F030000, size 0x40000 (256 KiB).
+- Any other directory under `reserved-memory` is also SRAM or PSRAM the radio
+  layout has to respect; paste the list even if it only holds the pool.
+- `echo` only adds the line break that the property file does not end with.
+
 ## 4. Which kernel options are already on
 
 HOST, in the Buildroot output directory of your Espressif build (the one
@@ -124,12 +145,14 @@ GrieferPig publishes one full image, `s31_full_flash.bin`, under
 If the latest release has no such file, skip this section.
 
 Unplug the USB stick first. GrieferPig's image probes USB storage at boot,
-and nothing on the stick should depend on code we have not read closely.
+and the stick now holds the Alpine root with everything installed on it
+(htop, vim, mc, python3 and their libraries), which should not depend on code
+we have not read closely.
 
 ### Back up the flash
 
 The step 14 backup no longer matches the board: steps 14b and 15 changed
-the root file system slot. Put the board in download mode (hold **BOOT**,
+the root file system slot, so take a fresh one. Put the board in download mode (hold **BOOT**,
 tap **RST**, release **BOOT**), because esptool can only read the flash
 through the ROM's download mode.
 
@@ -137,8 +160,8 @@ HOST, in the Buildroot output directory, next to the step 14 backup. This
 reads all 16 MiB (0x1000000 bytes) from offset 0:
 
 ```sh
-esptool --chip esp32s31 --port /dev/ttyUSB1 --baud 1152000 read-flash 0 0x1000000 s31_full_flash-step15.bin
-ls -l s31_full_flash-step15.bin
+esptool --chip esp32s31 --port /dev/ttyUSB1 --baud 1152000 read-flash 0 0x1000000 s31_full_flash-step19.bin
+ls -l s31_full_flash-step19.bin
 ```
 
 `ls` must show 16777216 bytes. A shorter file means the read stopped; run
@@ -186,7 +209,9 @@ dmesg | grep -i -E 'radio|wlan|esp32s31-wifi|softmac' | head -30
 - `grep isa`: his device tree lists `f`. His radio code executes F
   instructions, so Wi-Fi working on his image means our chip has F.
 - `free`: RAM left with Wi-Fi up, to compare with our 8892 KiB available
-  (step 15).
+  after boot with networking (step 15).
+- `ping` to the PC (192.168.0.14) goes over Wi-Fi only, since the Ethernet
+  cable stays unplugged.
 
 ### Restore our flash
 
@@ -194,7 +219,7 @@ Download mode again, then HOST, in the Buildroot output directory. Writing
 the 16 MiB backup puts every slot back, ours included:
 
 ```sh
-esptool --chip esp32s31 --port /dev/ttyUSB1 --baud 1152000 write-flash 0x0 s31_full_flash-step15.bin
+esptool --chip esp32s31 --port /dev/ttyUSB1 --baud 1152000 write-flash 0x0 s31_full_flash-step19.bin
 ```
 
 Plug the stick back in and tap **RST**: Alpine should boot from the stick
