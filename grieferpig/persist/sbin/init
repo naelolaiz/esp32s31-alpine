@@ -1,0 +1,33 @@
+#!/bin/sh
+# /sbin/init for GrieferPig's image, kept in its writable overlay (the
+# persist JFFS2 partition), where it hides his /sbin/init.
+#
+# His /init mounts the overlay, loads the radio module, then runs
+# "exec /sbin/init", which now starts this script. It boots Alpine from the
+# USB stick when one is plugged in, otherwise his BusyBox init as before.
+# Same steps as buildroot/rootfs-overlay/sbin/init (plan step 14b).
+
+# Wait for the stick, in case USB is slower than the radio load.
+tries=5
+while [ ! -b /dev/sda1 ] && [ "$tries" -gt 0 ]; do
+	sleep 1
+	tries=$((tries - 1))
+done
+
+if [ -b /dev/sda1 ] && mount -t ext4 -o rw /dev/sda1 /mnt; then
+	if [ -f /mnt/etc/alpine-release ] && mount -t devtmpfs devtmpfs /mnt/dev; then
+		echo "init: Alpine found on /dev/sda1, switching to it"
+		cd /mnt
+		if pivot_root . mnt; then
+			# Detaches his whole root: overlay, /proc, /sys, /run, /tmp.
+			umount -l /mnt
+			exec chroot . /sbin/init <dev/console >dev/console 2>&1
+		fi
+		cd /
+		umount /mnt/dev
+	fi
+	umount /mnt
+fi
+
+echo "init: no Alpine stick, starting GrieferPig's BusyBox init"
+exec /bin/busybox init
