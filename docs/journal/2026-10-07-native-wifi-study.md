@@ -154,7 +154,8 @@ precision floating point (F, without D):
   ```
 
 - GrieferPig's device tree lists `rv32imafbcn_zba_zbb_zbc_zbs`, and his
-  kernel carries an F-only context switch.
+  kernel carries an F-only context switch. (Zba, Zbb, Zbc and Zbs were later
+  confirmed on the board: [journal](2026-10-10-bitmanip.md).)
 - The board's Buildroot `/lib` has an `ld-musl-riscv32-sp.so.1` loader next to
   the `-sf` one (step 12): Espressif's toolchain ships a single-precision
   (`ilp32f`) multilib.
