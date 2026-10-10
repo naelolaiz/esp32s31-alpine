@@ -105,8 +105,10 @@ ERROR: reserving fdt memory region failed (addr=2f030000 size=40000 flags=4)
 
 - 0x40200000 is the DTB slot (flash 0x300000): SPL maps flash from 0x100000
   at 0x40000000 (`board/espressif/esp32s31/spl.c`).
-- U-Boot copies the tree to the top of PSRAM (0x50FFB000 to 0x50FFF6A2,
-  18 KiB) before starting Linux, so it does not land in SRAM.
+- U-Boot copies the tree to the top of PSRAM (0x50FFB000 to 0x50FFF6A2)
+  before starting Linux, so it does not land in SRAM. The copy is 18 KiB
+  while the DTB file is 5795 bytes: U-Boot leaves free room after the tree
+  for its own changes (inferred, from the sizes only).
 - The `ERROR` line is U-Boot failing to add the DMA pool to its own memory
   map. U-Boot's memory bank is SRAM at 0x2F030000 (320 KiB, the `DRAM:` line)
   and it runs from there itself, which is probably why the reservation is

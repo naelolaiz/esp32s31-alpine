@@ -106,8 +106,10 @@ build/linux-*/scripts/dtc/dtc -I dtb -O dts -o esp32s31-step20.dts images/esp32s
 grep -n -A5 'dma-pool@' esp32s31-step20.dts
 ```
 
-Edit `esp32s31-step20.dts` at the lines `grep` printed. The node name
-carries the start address by convention, and `reg` is start and size:
+Edit `esp32s31-step20.dts` at the lines `grep` printed, replacing the two
+lines rather than adding new ones: `dtc` refuses a node that has the same
+property twice (`ERROR (duplicate_property_names)`). The node name carries
+the start address by convention, and `reg` is start and size:
 
 ```diff
 -		dma-pool@2f030000 {
@@ -145,7 +147,7 @@ holds the clone of this repository, as in step 19). Close miniterm first
 (Ctrl+]), because esptool needs the serial port. Put the board in download
 mode (hold **BOOT**, tap **RST**, release **BOOT**).
 
-HOST, in the Buildroot output directory. This writes the 18 KiB file at the
+HOST, in the Buildroot output directory. This writes the 6 KiB file at the
 DTB slot only:
 
 ```sh
