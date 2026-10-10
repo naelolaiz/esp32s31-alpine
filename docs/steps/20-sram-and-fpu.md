@@ -1,8 +1,14 @@
 # Step 20: SRAM and FPU for the radio
 
 Goal: free the internal SRAM the Wi-Fi radio needs, with Ethernet and the USB
-stick still working, then let Linux use the F extension. This page covers
-part 1, the SRAM. Part 2, the F-only FPU patch, follows once part 1 works.
+stick still working, then let Linux use the F extension.
+
+- Part 1 (sections 1 to 5) moves the kernel's DMA pool with a trial DTB.
+  Done on 2026-10-10 ([journal](../journal/2026-10-10-dma-pool.md)).
+- Part 2 (sections 6 and 7) adds F-only FPU support to the kernel and a test
+  program for it.
+- Sections 8 to 10 rebuild the kernel once with all of it, flash it and
+  check it on the board.
 
 Step 19's results are in the
 [journal](../journal/2026-10-10-native-wifi-board-checks.md). The one thing
@@ -85,7 +91,7 @@ GrieferPig's memory map):
 
 The quickest test changes only the device tree that is already built, and
 flashes only its slot (0x300000), so the kernel and the root on the stick
-stay as they are. Section 4 makes the change permanent once it works.
+stay as they are. Section 8 makes the change permanent.
 
 ### Make the DTB
 
@@ -223,13 +229,92 @@ Before that, if the Buildroot login came up, log in there and run
 `dmesg | grep -i -E 'dwc2|dma|usb' | head -30`: it shows why the USB host
 did not start, and with it how much more pool it needs.
 
-## 6. Make it permanent
+## 6. Why Linux ignores the FPU today
 
-The same change as a kernel patch is
-[kernel/patches/0001-riscv-dts-esp32s31-shrink-the-DMA-pool.patch](../../kernel/patches/0001-riscv-dts-esp32s31-shrink-the-DMA-pool.patch).
+The cores have the F extension (single-precision floating point) but not D
+(double precision). The evidence is indirect: Espressif's Wi-Fi libraries
+for this chip are built for `rv32imafc` with the single-float ABI, and
+GrieferPig's kernel runs them with F on (step 19 study). Three things keep
+Linux from using it:
+
+- The device tree lists no `f` (`riscv,isa = "rv32imac_zicsr_zifencei"`), so
+  the kernel does not know about it. The boot line `riscv: base ISA
+  extensions acim` shows that.
+- Even with `f` listed, stock Linux drops F without D
+  (`arch/riscv/kernel/cpufeature.c`, "This kernel does not support systems
+  with F but not D").
+- The kernel saves and restores a process's float registers on every
+  context switch with `fsd`/`fld`, the double-precision store and load, which
+  are illegal instructions without D (`arch/riscv/kernel/fpu.S`).
+
+With F off, the floating point unit is disabled for every process
+(`sstatus.FS` stays "Off"), and any float instruction kills the process with
+`SIGILL`. Alpine's user space is soft-float and never uses one, so nothing
+changes for it. The radio code in step 21 does use F, which is why it is
+needed.
+
+The two patches:
+
+- [kernel/patches/0002-riscv-support-harts-with-F-but-without-D.patch](../../kernel/patches/0002-riscv-support-harts-with-F-but-without-D.patch)
+  adds `CONFIG_FPU_F_ONLY` (**Platform type → FPU support for harts with F
+  but without D**, under **FPU support**). It is on by default for
+  Espressif SoCs (`ARCH_ESPRESSIF`), so no configuration change is needed.
+  With it, the kernel accepts F without D, and the context switch uses
+  `fsw`/`flw` (single precision) into the low half of the same 64-bit slots,
+  so the signal frame and the ptrace layout stay as they are. It ignores D,
+  because the upper halves would be lost.
+- [kernel/patches/0003-riscv-dts-esp32s31-describe-the-F-extension.patch](../../kernel/patches/0003-riscv-dts-esp32s31-describe-the-F-extension.patch)
+  adds `f` to the CPU node of the device tree.
+
+The kernel code alone changes nothing: without `f` in the device tree, F
+stays off. That makes going back easy: flashing a DTB without `f` turns it
+off again with the same kernel.
+
+## 7. A test program for F
+
+[tools/fpu-test.c](../../tools/fpu-test.c) runs a float loop in two
+processes at once and checks that each one gets the same bits in all five
+rounds. A process killed by `SIGILL` means F is not available; different
+bits between rounds would mean the kernel mixed up the float registers of the
+two processes when it switched between them.
+
+CONTAINER `alpine-rv32` (`podman exec -it -u $(id -un) alpine-rv32 sh`), in
+`/work`. `-march=rv32imafc` lets the compiler use F instructions, while
+`-mabi=ilp32` keeps the soft-float calling convention of Alpine's libraries,
+so it links against them as usual. `-static` makes the binary independent of
+what is installed on the stick:
+
+```sh
+cd /work
+riscv32-alpine-linux-musl-gcc -static -O2 -march=rv32imafc -mabi=ilp32 -o fpu-test esp32s31-alpine/tools/fpu-test.c
+riscv32-alpine-linux-musl-objdump -d fpu-test | grep -c -E 'f(add|sub|mul|madd)\.s'
+qemu-riscv32 ./fpu-test
+```
+
+- The `grep` count must be more than 0: the binary really contains F
+  instructions.
+- `qemu-riscv32` emulates a CPU with F, so the test must print `OK` here
+  before it means anything on the board.
+
+The board has no network now, so the program goes on the stick. Power the
+board off at its prompt with `poweroff` and wait for `reboot: Power down`
+(it stays halted, see the open item on `reboot`), then move the stick to the
+PC. HOST, in the porting directory (the one `/work` is in the container):
+
+```sh
+sudo mkdir -p /mnt/alpine-root
+sudo mount /dev/disk/by-label/alpine-root /mnt/alpine-root
+sudo cp fpu-test /mnt/alpine-root/root/
+sudo umount /mnt/alpine-root
+```
+
+Keep the stick out of the board until section 9: the kernel flash comes
+first.
+
+## 8. Rebuild the kernel with all patches
+
 Buildroot applies kernel patches only when it unpacks the kernel source, so
-this rebuilds the whole kernel. Part 2 adds more kernel patches, so do this
-section once, when part 2 is ready, and the kernel is rebuilt only once.
+this rebuilds the whole kernel from fresh source, with patches 0001 to 0003.
 
 ### Keep the kernel options from steps 4 and 6
 
@@ -241,11 +326,14 @@ directory. If the fragments are not named, the new kernel has no USB storage,
 cannot mount the stick, and the board falls back to Buildroot.
 
 HOST, in the Buildroot output directory. The first command keeps a copy of
-today's kernel configuration to compare against after the rebuild; the
-second shows which fragments Buildroot applies:
+today's kernel configuration to compare against after the rebuild, the
+second today's kernel, which is the way back if the new one does not boot
+(the rebuild overwrites `images/xipImage`); the third shows which fragments
+Buildroot applies:
 
 ```sh
 cp build/linux-*/.config kernel-config-before-step20
+cp images/xipImage xipImage-before-step20
 grep BR2_LINUX_KERNEL_CONFIG_FRAGMENT_FILES .config
 ```
 
@@ -255,15 +343,17 @@ If it is empty or misses one, set it in the next step.
 
 ### Name the patches and the fragments
 
-HOST, same directory. Open Buildroot's configuration:
+Your clone of this repository must be on the branch that has the patches
+(`claude/native-wifi-ensw69` until it is merged), because Buildroot reads
+them from the clone. HOST, same directory. Open Buildroot's configuration:
 
 ```sh
 make menuconfig
 ```
 
 - **Kernel → Custom kernel patches** (`BR2_LINUX_KERNEL_PATCH`): the absolute
-  path of `kernel/patches` in your clone of this repository. Buildroot
-  applies every `*.patch` in that directory, in name order.
+  path of `kernel/patches` in your clone. Buildroot applies every `*.patch`
+  in that directory, in name order.
 - **Kernel → Additional configuration fragment files**
   (`BR2_LINUX_KERNEL_CONFIG_FRAGMENT_FILES`), only if the `grep` above
   missed one: the absolute paths of `kernel/fragments/10-block.config` and
@@ -281,16 +371,66 @@ and the fragments, and builds the kernel, the DTB and the flash image:
 make linux-dirclean
 make
 diff kernel-config-before-step20 build/linux-*/.config
-build/linux-*/scripts/dtc/dtc -I dtb -O dts images/esp32s31.dtb | grep -A5 'dma-pool@'
+build/linux-*/scripts/dtc/dtc -I dtb -O dts images/esp32s31.dtb | grep -E 'dma-pool@|reg = <0x2f07|riscv,isa'
 ```
 
-- `diff` compares the kernel configuration before and after. With patch
-  0001 alone it should print nothing, since a device tree patch changes no
-  option. Any `CONFIG_` line it prints is an option that was set by hand and
-  is not in the fragments; paste it before flashing.
-- The last command should show `dma-pool@2f073000` with
-  `reg = <0x2f073000 0x5000>`, from the DTB Buildroot just built.
+- `diff` compares the kernel configuration before and after. Expect only
+  `CONFIG_FPU_F_ONLY=y`, the new option from patch 0002. Any other `CONFIG_`
+  line is an option that was set by hand and is not in the fragments; paste
+  it before flashing.
+- The last command should show `dma-pool@2f073000`,
+  `reg = <0x2f073000 0x5000>` and `riscv,isa = "rv32imafc_zicsr_zifencei"`
+  from the DTB Buildroot just built.
 
-Flash it at 0x300000 as in section 3, with `images/esp32s31.dtb` as the
-file. With patch 0001 alone the kernel code did not change, so the 0x500000
-slot can stay as it is.
+## 9. Flash and check
+
+Both the kernel and the DTB changed. Download mode (hold **BOOT**, tap
+**RST**, release **BOOT**), esptool venv active, miniterm closed. HOST, in
+the Buildroot output directory. This writes the two slots in one go:
+
+```sh
+esptool --chip esp32s31 --port /dev/ttyUSB0 --baud 1152000 write-flash 0x300000 images/esp32s31.dtb 0x500000 images/xipImage
+```
+
+Plug the stick back in, open the console as in section 3 and tap **RST**.
+
+- If F is missing after all, the kernel itself should fault with an illegal
+  instruction early, around the start of `/sbin/init`, because it restores
+  float registers that do not exist (expected, not tested). Then go back as
+  in section 10.
+- Otherwise Alpine boots as before.
+
+BOARD, Alpine logged in as root. The first two show what the kernel made of
+the ISA, the third runs the test:
+
+```sh
+dmesg | grep -i -E 'isa|F but not D'
+grep isa /proc/cpuinfo
+/root/fpu-test
+```
+
+- Expect `riscv: base ISA extensions acfim` and no `F but not D` line.
+- `/proc/cpuinfo` should list `rv32imafc_zicsr_zifencei`.
+- `fpu-test` should print two `process N: ... in all 5 rounds` lines with the
+  same values as in QEMU, and `OK`.
+
+Paste the output.
+
+## 10. Going back
+
+The DTB without `f` turns F off with the new kernel. Download mode, then
+HOST, in the Buildroot output directory. `esp32s31-step20.dtb` is part 1's
+trial DTB, with the small pool and no `f`:
+
+```sh
+esptool --chip esp32s31 --port /dev/ttyUSB0 --baud 1152000 write-flash 0x300000 esp32s31-step20.dtb
+```
+
+If the new kernel does not boot even with that DTB, put the old kernel back
+too. HOST, same directory:
+
+```sh
+esptool --chip esp32s31 --port /dev/ttyUSB0 --baud 1152000 write-flash 0x300000 esp32s31-step20.dtb 0x500000 xipImage-before-step20
+```
+
+That is exactly the state at the end of part 1.
