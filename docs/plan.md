@@ -121,7 +121,10 @@ if both fail, Alpine in the 4 MiB cramfs with apk-tools built against mbedtls.
     0x2F078C00-0x2F07CFB0, with Ethernet and USB still working
     ([guide](steps/20-sram-and-fpu.md), `kernel/patches/0001`); F-only
     FPU support in the kernel (`cpufeature.c`, F-only context switch, `f` in the
-    device tree). The `esp32s31-wifi` repository starts here.
+    device tree; `kernel/patches/0002`, `0003`). Done 2026-10-10: pool
+    ([journal](journal/2026-10-10-dma-pool.md)) and F on the board
+    ([journal](journal/2026-10-10-fpu-f-only.md)). The radio port itself
+    starts in step 21.
 21. **Radio driver.** Port GrieferPig's radio loader, FreeRTOS emulation and
     soft-MAC mac80211 driver onto Espressif's 6.18; build the radio payload with
     ESP-IDF `a602e67b` and flash it into a free slot, until `wlan0` scans.
@@ -155,7 +158,7 @@ Done when: the board reaches the repository over Wi-Fi with Ethernet unplugged.
 - [ ] `reboot` and `poweroff` end with the board halted; only RST restarts it. Espressif's OpenSBI handles every SBI SRST request by setting the HP core 0 software reset bit (`LP_AONCLKRST_HPCORE0_RESET_CTRL_REG` bit 20), and the chip does not come back from it (step 15).
 - [ ] The network costs about 960 KiB of available RAM, 756 KiB of it in no `/proc/meminfo` counter; check whether it is the Ethernet driver's receive buffers (compare `MemFree` around `ifdown eth0`, step 15).
 - [ ] Why 100 Mbps on a gigabit PHY? Check on a known gigabit port.
-- [ ] Does the core implement the F extension? Step 2 said no, but `/proc/cpuinfo` only repeats the device tree. Espressif's ESP32-S31 Wi-Fi libraries are built `rv32imafc` with the single-float ABI, so F without D is likely (step 19 journal); confirm on the board.
+- [x] Does the core implement the F extension? Yes, without D (step 20): with `kernel/patches/0002` and `0003` the kernel reports `acfim`, and a float test in two processes gives the same bits as QEMU. Step 2's "no" only read the device tree.
 - [ ] Can the flash layout give the rootfs more than 4 MiB? Kernel slot is 7 MiB (0x500000 to 0xC00000) with the kernel at 3.7 MiB, so moving `SLOT_ROOTFS` down is possible (layout in ground-truth.md).
 - [x] Does libucontext support riscv32? Upstream has `arch/riscv32`; aports passes `ARCH=$CARCH`, so no aports change expected (check the 1.5.2 tarball in step 8).
 - [ ] Buildroot forces `CONFIG_BLK_DEV_INITRD=y` (kconfig fixup in `linux/linux.mk`, confirmed: the defconfig sets `BR2_TARGET_ROOTFS_CPIO=y` with gzip), which pulls in all initramfs decompressors. Drop the cpio image to save kernel flash, once nothing on the board needs it.

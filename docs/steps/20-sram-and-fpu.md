@@ -8,7 +8,8 @@ stick still working, then let Linux use the F extension.
 - Part 2 (sections 6 and 7) adds F-only FPU support to the kernel and a test
   program for it.
 - Sections 8 to 10 rebuild the kernel once with all of it, flash it and
-  check it on the board.
+  check it on the board. Done on 2026-10-10
+  ([journal](../journal/2026-10-10-fpu-f-only.md)): F works on the board.
 
 Step 19's results are in the
 [journal](../journal/2026-10-10-native-wifi-board-checks.md). The one thing
