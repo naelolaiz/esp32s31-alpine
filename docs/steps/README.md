@@ -41,3 +41,11 @@ A step with no guide was either short enough that its
 
 All journal entries are in this repository, the ones for steps 7 to 11
 included.
+
+## Side tracks
+
+Work outside the 24 steps:
+
+| What | Guide | Journal | State |
+| --- | --- | --- | --- |
+| Linux on both harts (SMP) | [smp.md](smp.md) | [SMP study](../journal/2026-10-10-smp-study.md) | experiment ready |
