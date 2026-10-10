@@ -1,0 +1,47 @@
+#!/bin/sh
+# Wi-Fi at boot for Alpine on GrieferPig's kernel, with his wpa_supplicant,
+# until Alpine has its own. Runs from OpenRC's "local" service.
+#
+# His root (squashfs) and his settings (persist, JFFS2) are mounted
+# read-only from flash. wpa_supplicant runs chrooted in his root, so it
+# uses his libraries, with the network he saved there with esp32-config.
+# The address comes from Alpine's udhcpc.
+#
+# Every command and its output go to /var/log/gp-wifi.log. Running the
+# script again restarts Wi-Fi: mounts already in place are kept.
+
+exec >/var/log/gp-wifi.log 2>&1
+set -x
+
+gp=/mnt/gp
+gp_root=$(sed -n 's/^mtd\([0-9]*\):.*"rootfs"$/\1/p' /proc/mtd)
+gp_persist=$(sed -n 's/^mtd\([0-9]*\):.*"persist"$/\1/p' /proc/mtd)
+
+mounted()
+{
+	grep -q " $1 " /proc/mounts
+}
+
+mkdir -p "$gp" /mnt/persist
+mounted "$gp" || mount -t squashfs -o ro "/dev/mtdblock$gp_root" "$gp" || exit 1
+mounted /mnt/persist ||
+	mount -t jffs2 -o ro "/dev/mtdblock$gp_persist" /mnt/persist || exit 1
+
+# What wpa_supplicant and wpa_cli need inside his read-only root: devices,
+# /proc and /sys, a writable /run (config and control socket) and /tmp
+# (wpa_cli's own socket).
+mounted "$gp/dev" || mount -o bind /dev "$gp/dev"
+mounted "$gp/proc" || mount -t proc proc "$gp/proc"
+mounted "$gp/sys" || mount -t sysfs sysfs "$gp/sys"
+mounted "$gp/run" || mount -t tmpfs -o mode=0755 tmpfs "$gp/run"
+mounted "$gp/tmp" || mount -t tmpfs -o mode=1777 tmpfs "$gp/tmp"
+cp /mnt/persist/upper/etc/esp32-conf/wpa_supplicant.conf "$gp/run/wpa.conf" || exit 1
+
+# A second run replaces the first one's processes.
+killall wpa_supplicant udhcpc 2>/dev/null
+sleep 1
+
+ip link set wlan0 up
+chroot "$gp" wpa_supplicant -B -D nl80211 -i wlan0 -c /run/wpa.conf || exit 1
+# -b: keep trying in the background if the association takes longer.
+udhcpc -b -i wlan0 -p /run/udhcpc.wlan0.pid

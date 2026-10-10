@@ -1,0 +1,42 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: alpine-riscv32 <alpine-riscv32@users.noreply.github.com>
+Date: Sat, 10 Oct 2026 20:41:30 +0000
+Subject: [PATCH] riscv: dts: esp32s31: shrink the DMA pool and move it up
+
+The coherent DMA pool takes 256 KiB of internal SRAM at 0x2f030000,
+which is where the ESP-IDF Wi-Fi radio code needs its heap, buffers and
+exception stack (0x2f030000-0x2f072380, plus 0x2f078c00-0x2f07cfb0).
+
+Its users allocate a few pages: the EMAC rings (64 RX and 128 TX
+descriptors of 32 bytes, one page each) and the dwc2 host status
+buffer. Give it 20 KiB at 0x2f073000, the gap the radio layout leaves
+for DMA descriptors. It stays in internal SRAM, which the data cache
+does not cover, so the descriptors need no cache maintenance.
+---
+ arch/riscv/boot/dts/espressif/esp32s31.dts | 10 ++++++++--
+ 1 file changed, 8 insertions(+), 2 deletions(-)
+
+diff --git a/arch/riscv/boot/dts/espressif/esp32s31.dts b/arch/riscv/boot/dts/espressif/esp32s31.dts
+index c0b39b790..fd01fec5c 100644
+--- a/arch/riscv/boot/dts/espressif/esp32s31.dts
++++ b/arch/riscv/boot/dts/espressif/esp32s31.dts
+@@ -78,11 +78,17 @@ reserved-memory {
+ 		#size-cells = <1>;
+ 		ranges;
+ 
+-		dma_pool: dma-pool@2f030000 {
++		/*
++		 * Coherent DMA memory for the EMAC rings and the USB host. It stays
++		 * in internal SRAM, which the data cache does not cover, and is kept
++		 * small so that 0x2f030000-0x2f072380 and 0x2f078c00-0x2f07cfb0 stay
++		 * free for the Wi-Fi radio code.
++		 */
++		dma_pool: dma-pool@2f073000 {
+ 			compatible = "shared-dma-pool";
+ 			linux,dma-default;
+ 			no-map;
+-			reg = <0x2f030000 0x40000>;
++			reg = <0x2f073000 0x5000>;
+ 		};
+ 	};
+ 

@@ -1,0 +1,29 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: alpine-riscv32 <alpine-riscv32@users.noreply.github.com>
+Date: Sat, 10 Oct 2026 21:11:00 +0000
+Subject: [PATCH 3/3] riscv: dts: esp32s31: describe the F extension
+
+The cores implement single-precision floating point (F) without D:
+Espressif's Wi-Fi libraries for the ESP32-S31 are built for
+rv32imafc with the ilp32f ABI. List f in the ISA, so that a kernel
+with CONFIG_FPU_F_ONLY enables it.
+---
+ arch/riscv/boot/dts/espressif/esp32s31.dts | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/riscv/boot/dts/espressif/esp32s31.dts b/arch/riscv/boot/dts/espressif/esp32s31.dts
+index fd01fec5c..8759b2f0e 100644
+--- a/arch/riscv/boot/dts/espressif/esp32s31.dts
++++ b/arch/riscv/boot/dts/espressif/esp32s31.dts
+@@ -53,9 +53,9 @@ cpu0: cpu@0 {
+ 			device_type = "cpu";
+ 			reg = <0>;
+ 			compatible = "riscv";
+-			riscv,isa = "rv32imac_zicsr_zifencei";
++			riscv,isa = "rv32imafc_zicsr_zifencei";
+ 			riscv,isa-base = "rv32i";
+-			riscv,isa-extensions = "i", "m", "a", "c", "zicsr",
++			riscv,isa-extensions = "i", "m", "a", "f", "c", "zicsr",
+ 					       "zifencei";
+ 			mmu-type = "riscv,sv32";
+ 			clock-frequency = <320000000>;
