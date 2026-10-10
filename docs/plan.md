@@ -110,14 +110,18 @@ if both fail, Alpine in the 4 MiB cramfs with apk-tools built against mbedtls.
 19. **Study the native design.** Community chain (ROM, ESP-IDF second stage,
     loader, OpenSBI, Linux) versus Espressif's (ROM, SPL, OpenSBI, U-Boot, Linux).
     Decide: port into Espressif's chain or switch. Record why in the journal.
-    Study done: [journal](journal/2026-10-07-native-wifi-study.md). Recommended:
-    keep Espressif's chain and run the ESP-IDF Wi-Fi libraries inside Linux, as
-    GrieferPig's 6.18 port does; steps 20 to 22 are rewritten once Juan decides.
-20. **Hart 0 firmware.** Reserve hart 0 and the shared SRAM window in OpenSBI and
-    the device tree; ESP-IDF Wi-Fi firmware on hart 0, Linux on hart 1.
-    The `esp32s31-wifi` repository starts here.
-21. **Linux driver.** Port `esp32s31-wifi` until `wlan0` associates and pings.
-22. **Alpine Wi-Fi.** OpenRC service sets credentials through sysfs, runs `udhcpc -i wlan0`.
+    Study done: [journal](journal/2026-10-07-native-wifi-study.md). Chosen
+    (2026-10-10): keep Espressif's chain and run the ESP-IDF Wi-Fi libraries
+    inside Linux, as GrieferPig's 6.18 port does.
+20. **SRAM and FPU.** Shrink the kernel's DMA pool (0x2F030000, 256 KiB) so the
+    radio gets 0x2F030000-0x2F07CFB0, with Ethernet and USB still working; F-only
+    FPU support in the kernel (`cpufeature.c`, F-only context switch, `f` in the
+    device tree). The `esp32s31-wifi` repository starts here.
+21. **Radio driver.** Port GrieferPig's radio loader, FreeRTOS emulation and
+    soft-MAC mac80211 driver onto Espressif's 6.18; build the radio payload with
+    ESP-IDF `a602e67b` and flash it into a free slot, until `wlan0` scans.
+22. **Alpine Wi-Fi.** `wpa_supplicant` and `iw` (alpine-riscv32 patch 0013), an
+    OpenRC setup for `wlan0` with `udhcpc`, then apk and SSH over Wi-Fi.
 
 Done when: the board reaches the repository over Wi-Fi with Ethernet unplugged.
 
@@ -137,7 +141,7 @@ Done when: the board reaches the repository over Wi-Fi with Ethernet unplugged.
 | microSD wiring or dw_mmc port fails | pendrive root, then NFS root |
 | RAM (about 12 MB free) too tight for OpenRC, Dropbear, apk | fewer services, BusyBox init as a stopgap |
 | Espressif BSP rebases (developer preview) | pin commits in `bsp/versions.md` |
-| Native Wi-Fi takes hart 0 from Linux; community code is on 7.1 | USB dongle stays as the Wi-Fi path |
+| The radio port does not fit Espressif's kernel or SRAM (the community layout is fragile) | USB dongle (step 18) stays as the Wi-Fi path |
 
 ## Open questions
 

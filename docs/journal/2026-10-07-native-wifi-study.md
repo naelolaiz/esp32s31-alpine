@@ -187,11 +187,10 @@ ground. It also conflicts with where Espressif is heading: hart 1 for Linux.
 
 ## Decision
 
-Recommended: **B, the radio inside Linux**, because it is the only design
+Chosen on 2026-10-10: **B, the radio inside Linux**. It is the only design
 that keeps Espressif's boot stack as shipped, it starts from a kernel already
 based on Espressif's commits, and it gives Alpine a normal `wlan0` driven by
-`wpa_supplicant`, `iw` and `udhcpc`. The decision is Juan's (asked in the
-project thread); this entry is updated with his answer.
+`wpa_supplicant`, `iw` and `udhcpc`.
 
 What B needs, in the order phase 5 does it:
 
