@@ -232,7 +232,10 @@ Then add a `cpu@1` node after the end of `cpu@0`, inside `cpus`. The
 - `reg = <0x01>` is the hart ID, the number Linux passes to SBI to start
   this hart.
 - The ISA strings, `mmu-type` and `clock-frequency` are copied from
-  `cpu@0`, because both cores are the same design.
+  `cpu@0`, because both cores are the same design. Copy `riscv,isa` and
+  `riscv,isa-extensions` from the `cpu@0` in your file, not from this diff:
+  step 20 part 2 adds `f` there, and Linux only uses an extension that every
+  hart lists, so a `cpu@1` without `f` would take F away from hart 0 too.
 - The `interrupt-controller` child is the hart's own local interrupt
   controller, which Linux expects under every hart. It needs no `phandle`
   because no other node refers to it.
