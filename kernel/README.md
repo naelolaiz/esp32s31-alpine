@@ -20,3 +20,6 @@ Changes on top of Espressif's `integration/v6.18-esp32s31` kernel
   Planned: the dw_mmc esp32s31 glue port (step 5, parked).
 
 Each fragment or patch gets a journal entry recording its size and RAM cost.
+
+`smp/` holds the SMP experiment (a fragment and one patch), which is not part
+of the normal build; see [smp/README.md](smp/README.md).

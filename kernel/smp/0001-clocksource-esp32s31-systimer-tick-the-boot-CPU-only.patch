@@ -1,0 +1,40 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: alpine-riscv32 <alpine-riscv32@users.noreply.github.com>
+Date: Sat, 10 Oct 2026 22:58:00 +0200
+Subject: [PATCH] clocksource: esp32s31-systimer: tick the boot CPU only
+
+An SMP kernel with two CPUs in the device tree makes cpu_possible_mask
+hold both. The systimer clockevent claims that mask, but its interrupt
+reaches core 0 only and the interrupt chain has no irq_set_affinity, so
+tick_check_percpu() refuses it as CPU 0's tick device. CPU 0 then ticks
+from the riscv timer, whose MTIME stops while the core sits in WFI.
+
+Claim CPU 0 alone, so the boot CPU keeps the systimer as its tick on an
+SMP kernel. A second CPU still needs its own timer event.
+---
+ drivers/clocksource/timer-esp32s31-systimer.c | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/clocksource/timer-esp32s31-systimer.c b/drivers/clocksource/timer-esp32s31-systimer.c
+index 8df1ca18..409f31bf 100644
+--- a/drivers/clocksource/timer-esp32s31-systimer.c
++++ b/drivers/clocksource/timer-esp32s31-systimer.c
+@@ -173,7 +173,14 @@ static int __init systimer_init(struct device_node *np)
+ 	systimer.ce.set_next_event	= systimer_set_next_event;
+ 	systimer.ce.set_state_shutdown	= systimer_shutdown;
+ 	systimer.ce.set_state_oneshot	= systimer_set_oneshot;
+-	systimer.ce.cpumask		= cpu_possible_mask;
++	/*
++	 * Only the boot hart takes this interrupt: the interrupt matrix routes
++	 * it to core 0 and cannot move it. With two possible CPUs a device
++	 * whose mask covers both is refused as CPU 0's tick, because its IRQ
++	 * affinity cannot be set, and CPU 0 would fall back to the CLINT timer
++	 * that stops in WFI.
++	 */
++	systimer.ce.cpumask		= cpumask_of(0);
+ 	systimer.ce.irq			= irq;
+ 
+ 	ret = request_irq(irq, systimer_isr, IRQF_TIMER | IRQF_IRQPOLL,
+-- 
+2.43.0
+
