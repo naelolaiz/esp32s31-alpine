@@ -34,8 +34,8 @@ A step with no guide was either short enough that its
 | 18 | Optional early Wi-Fi: USB dongle | | | planned |
 | 19 | Study the native Wi-Fi design | [19-native-wifi-study.md](19-native-wifi-study.md) | [native Wi-Fi study](../journal/2026-10-07-native-wifi-study.md), [board checks](../journal/2026-10-10-native-wifi-board-checks.md), [GrieferPig image trial](../journal/2026-10-10-grieferpig-trial.md) | done |
 | 20 | SRAM and FPU for the radio | [20-sram-and-fpu.md](20-sram-and-fpu.md) | [DMA pool](../journal/2026-10-10-dma-pool.md), [F extension](../journal/2026-10-10-fpu-f-only.md) | done |
-| 21 | Radio driver | | | next |
-| 22 | Alpine Wi-Fi | | | planned |
+| 21 | Radio driver | none: GrieferPig's kernel has it | [GrieferPig image trial](../journal/2026-10-10-grieferpig-trial.md) | not needed on his kernel (2026-10-10) |
+| 22 | Alpine Wi-Fi | [22-alpine-wifi.md](22-alpine-wifi.md) | | next |
 | 23 | Reproducible builds | | | planned |
 | 24 | Upstream | | | planned |
 
