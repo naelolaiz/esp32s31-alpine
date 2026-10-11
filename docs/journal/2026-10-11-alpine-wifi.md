@@ -144,8 +144,31 @@ host`: the PC got no answer for the board's address. It came after the
 router had restarted with a new channel setting, and reconnecting the PC's
 Wi-Fi fixed it. Which side kept the stale state was not established.
 
+## A kernel panic without swap
+
+Starting vim and nano at the same time (neither came up) ended in:
+
+```
+[  754.853308] Kernel panic - not syncing: Attempted to kill init! exitcode=0x00000007
+[  754.853889] SMP: stopping secondary CPUs
+```
+
+Exit code 7 is signal 7, `SIGBUS`, in init. Nothing else was printed, and
+his kernel has no kdump, pstore or mtdoops to keep the log across the
+reset. The likely reading (not proven): with no swap, memory pressure made
+the kernel drop pages of init's program from RAM, and reading them back
+from the stick failed. His kernel config expects swap on USB storage for
+such peaks. Step 22 section 9 adds a 128 MiB swap file on `sda1`, which
+Juan set up.
+
+## Upstream
+
+The channel patch went to GrieferPig as
+[GrieferPig/linux-esp32-s31#2](https://github.com/GrieferPig/linux-esp32-s31/pull/2),
+from the branch `wifi-channels-12-13` of a fork, on top of his current
+`v6.18-esp32-s31` (`52dc6ea`).
+
 ## Open
 
 - `free` with Alpine's wpa_supplicant running is not measured yet.
 - An association on channel 12 or 13 is not recorded yet (see above).
-- The channel patch is worth sending to GrieferPig.
