@@ -36,6 +36,7 @@ A step with no guide was either short enough that its
 | 20 | SRAM and FPU for the radio | [20-sram-and-fpu.md](20-sram-and-fpu.md) | [DMA pool](../journal/2026-10-10-dma-pool.md), [F extension](../journal/2026-10-10-fpu-f-only.md) | done |
 | 21 | Radio driver | none: GrieferPig's kernel has it | [GrieferPig image trial](../journal/2026-10-10-grieferpig-trial.md) | not needed on his kernel (2026-10-10) |
 | 22 | Alpine Wi-Fi | [22-alpine-wifi.md](22-alpine-wifi.md) | | next |
+| 22a | GrieferPig's image with channels 12 and 13 | [22a-grieferpig-rebuild.md](22a-grieferpig-rebuild.md) | | next |
 | 23 | Reproducible builds | | | planned |
 | 24 | Upstream | | | planned |
 
