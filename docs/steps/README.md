@@ -37,6 +37,7 @@ A step with no guide was either short enough that its
 | 21 | Radio driver | none: GrieferPig's kernel has it | [GrieferPig image trial](../journal/2026-10-10-grieferpig-trial.md) | not needed on his kernel (2026-10-10) |
 | 22 | Alpine Wi-Fi | [22-alpine-wifi.md](22-alpine-wifi.md) | [Alpine Wi-Fi](../journal/2026-10-11-alpine-wifi.md) | done |
 | 22a | GrieferPig's image with channels 12 and 13 | [22a-grieferpig-rebuild.md](22a-grieferpig-rebuild.md) | [Alpine Wi-Fi](../journal/2026-10-11-alpine-wifi.md) | done |
+| 22b | Temperature sensor and lm-sensors | [22b-temperature-sensor.md](22b-temperature-sensor.md) | [temperature sensor](../journal/2026-10-11-temperature-sensor.md) | sensor done; lm-sensors waits for the package CI |
 | 23 | Reproducible builds | | | planned |
 | 24 | Upstream | | | planned |
 
