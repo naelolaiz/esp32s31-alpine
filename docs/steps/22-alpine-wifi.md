@@ -69,6 +69,20 @@ udhcpc -i wlan0
   `ps | grep '[w]pa_supplicant'` should print one line;
   `killall wpa_supplicant` stops them all.
 
+`SCANNING` that never ends with only one wpa_supplicant running can also
+mean the router is on a channel the board does not scan. GrieferPig's
+driver (`drivers/net/wireless/espressif/esp32s31_softmac.c`) registers only
+2.4 GHz channels 1 to 11 (2412 to 2462 MHz). On 2026-10-11 the router's
+automatic channel choice had moved its 2.4 GHz network to channel 13
+(2472 MHz), and the board saw 38 other networks but not that one. Setting
+the router to a fixed channel 1, 6 or 11 fixes it. To check which channels
+the board hears:
+
+```sh
+timeout 20 chroot /mnt/gp wpa_supplicant -d -D nl80211 -i wlan0 -c /run/wpa.conf > /tmp/wpa-debug.log 2>&1
+grep -o 'freq=[0-9]*' /tmp/wpa-debug.log | sort | uniq -c
+```
+
 The stopgap script
 [`gp-wifi.start`](../../grieferpig/alpine/etc/local.d/gp-wifi.start) does
 the same at boot, when it is installed in `/etc/local.d`. After this step
