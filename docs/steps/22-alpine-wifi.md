@@ -273,7 +273,40 @@ rewrite `/etc/network/interfaces`, and `setup-disk` partitions and formats
 a disk, here the stick Alpine runs from. Single parts are safe on their own,
 for example `setup-timezone` (after `apk add tzdata`) or `setup-hostname`.
 
-## 9. Going back
+## 9. Swap on the stick
+
+GrieferPig's kernel is configured for swap on USB storage (its
+`esp32s31_defconfig`: "Short-lived userspace peaks spill to USB swap"), and
+his own image turns it on with his `esp32-config` tool. Under Alpine nothing
+does. Without swap, 16 MiB fill up quickly: on 2026-10-11 starting vim and
+nano at the same time ended in `Kernel panic - not syncing: Attempted to
+kill init! exitcode=0x00000007`. Exit code 7 is signal 7, `SIGBUS`. The
+likely reading (not proven): under memory pressure the kernel dropped
+pages of init's program from RAM and could not read them back from the
+stick.
+
+BOARD, as root:
+
+```sh
+df -h /
+dd if=/dev/zero of=/swapfile bs=1M count=128
+chmod 600 /swapfile
+mkswap /swapfile
+swapon /swapfile
+echo '/swapfile none swap sw 0 0' >> /etc/fstab
+rc-update add swap boot
+free
+```
+
+- `df` first: the file needs 128 MiB free on `sda1`.
+- `dd` writes every block of the file. The kernel refuses a swap file with
+  holes in it.
+- `chmod 600`: memory contents end up in the file, so only root may read it.
+- The `fstab` line and OpenRC's `swap` service (`swapon -a`) turn it on at
+  every boot.
+- `free` shows the swap in the `Swap:` line.
+
+## 10. Going back
 
 To GrieferPig's wpa_supplicant, BOARD: stop Alpine's from starting at boot,
 then start his by hand as in section 2 (or `chmod +x` the stopgap script, if
