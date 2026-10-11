@@ -1,0 +1,48 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: naelolaiz <1333555+naelolaiz@users.noreply.github.com>
+Date: Sun, 11 Oct 2026 13:05:00 +0000
+Subject: [PATCH] wifi: esp32s31: softmac: scan and join channels 12 and 13
+
+The softmac frontend registers 2.4 GHz channels 1 to 11 only and drops
+received frames from any other channel. The radio firmware already sets
+an ESP-IDF country with channels 1 to 13 (s31_wifi_prepare() in
+firmware/radio/radio_stack.c) and accepts S31_WIFI_SET_CHANNEL up to 13,
+so only the Linux side keeps the station off channels 12 and 13.
+
+Routers in Europe pick those channels too. With the router on channel
+13 (2472 MHz) the board saw 38 other networks and kept scanning for its
+own one.
+
+Register 13 channels and accept received frames from all of them.
+cfg80211 still decides where the station may transmit: with the world
+regulatory domain, channels 12 and 13 start as no-IR (passive scan only)
+until a beacon is seen there.
+---
+ drivers/net/wireless/espressif/esp32s31_softmac.c | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/wireless/espressif/esp32s31_softmac.c b/drivers/net/wireless/espressif/esp32s31_softmac.c
+--- a/drivers/net/wireless/espressif/esp32s31_softmac.c
++++ b/drivers/net/wireless/espressif/esp32s31_softmac.c
+@@ -179,7 +179,8 @@
+ 	bool tx_ba_requested, tx_ba_operational, tx_native_peer, tx_ba_flushing;
+ 	u32 tx_ampdu_submitted;
+ 	u8 channel;
+-	struct ieee80211_channel channels[11];
++	/* 2.4 GHz channels 1 to 13; the radio firmware sets a 1-13 country. */
++	struct ieee80211_channel channels[13];
+ 	struct ieee80211_rate rates[12];
+ 	struct ieee80211_supported_band band;
+ 	struct ieee80211_sband_iftype_data iftype;
+@@ -929,7 +930,7 @@
+ 		   length >= sizeof(struct s31_softmac_rx_header) + 24 &&
+ 		   length <= sizeof(struct s31_softmac_rx_header) + S31_SOFTMAC_FRAME_MAX &&
+ 		   meta.encoding <= 2 && meta.rate_index < (meta.encoding == 1 ? 8 : meta.encoding == 2 ? 10 : ARRAY_SIZE(sm->rates)) &&
+-		   channel >= 1 && channel <= 11) {
++		   channel >= 1 && channel <= ARRAY_SIZE(sm->channels)) {
+ 		u8 rate = meta.rate_index;
+ 		u8 encoding = meta.encoding, phy_flags = meta.flags;
+ 
+-- 
+2.43.0
+

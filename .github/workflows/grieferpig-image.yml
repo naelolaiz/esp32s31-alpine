@@ -1,0 +1,128 @@
+# Builds GrieferPig's ESP32-S31 image (boot chain, kernel, radio bundle and
+# root filesystem) with the patches in grieferpig/patches/ applied to his
+# trees. The build steps are the ones of his own release workflow
+# (.github/workflows/release-images.yml in GrieferPig/esp32-s31-linux), which
+# builds his published images on the same kind of runner.
+#
+# The images come out as the run's artifact "grieferpig-images": one file per
+# flash slot, except persist. Flashing them slot by slot keeps the persist
+# overlay, which holds our /sbin/init and the Wi-Fi profile. The guide is
+# docs/steps/22a-grieferpig-rebuild.md.
+
+name: GrieferPig image
+
+on:
+  push:
+    branches:
+      - "**"
+    paths:
+      - grieferpig/patches/**
+      - .github/workflows/grieferpig-image.yml
+  workflow_dispatch:
+
+env:
+  # His superproject at the commit the patches were made against. Its
+  # submodules (Linux, OpenSBI, U-Boot, Buildroot) are pinned by it.
+  GP_REPOSITORY: GrieferPig/esp32-s31-linux
+  GP_COMMIT: 1c132b4ad991960d10810d6138af317b01cf74c6
+
+permissions:
+  contents: read
+
+jobs:
+  image:
+    runs-on: ubuntu-24.04
+    # His release workflow allows 120 minutes for the same build.
+    timeout-minutes: 240
+    env:
+      IDF_PATH: ${{ github.workspace }}/.esp-idf
+      HOST_PYTHON: /usr/bin/python3
+      OUT: out
+    steps:
+      - name: Check out this repository, for the patches
+        uses: actions/checkout@v5
+        with:
+          path: ours
+
+      - name: Check out GrieferPig's repository and its submodules
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ env.GP_REPOSITORY }}
+          ref: ${{ env.GP_COMMIT }}
+          submodules: recursive
+          path: gp
+
+      # git apply, not git am: the runner has no git identity, and nothing
+      # here is committed.
+      - name: Apply our patches to his Linux tree
+        run: |
+          set -e
+          for p in ours/grieferpig/patches/linux-esp32-s31/*.patch; do
+            echo "== $p"
+            git -C gp/linux-esp32-s31 apply --verbose "$GITHUB_WORKSPACE/$p"
+          done
+          grep -n 'channels\[13\]' gp/linux-esp32-s31/drivers/net/wireless/espressif/esp32s31_softmac.c
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            bison bc build-essential ccache cpio device-tree-compiler flex gperf libffi-dev \
+            libssl-dev ninja-build python3-pkg-resources python3-pyelftools python3-dev swig rsync unzip xz-utils squashfs-tools
+
+      # ESP_IDF_REF, TOOLCHAIN_RELEASE_TAG and BTSTACK_REF, from his
+      # configs/build-versions.mk
+      - name: Read his pinned versions
+        working-directory: gp
+        run: |
+          python3 -c 'import sys; sys.path.insert(0, "."); from tools.checks.versions import versions; print("\n".join(k + "=" + v for k, v in versions().items()))' | tee -a "$GITHUB_ENV"
+
+      # ESP-IDF builds the radio and LP firmware, which use Espressif's
+      # closed Wi-Fi and Bluetooth libraries.
+      - name: Install ESP-IDF
+        run: |
+          git clone --filter=blob:none https://github.com/espressif/esp-idf.git "$IDF_PATH"
+          git -C "$IDF_PATH" checkout "$ESP_IDF_REF"
+          git -C "$IDF_PATH" submodule update --init --recursive
+          "$IDF_PATH/install.sh" esp32s31
+
+      - name: Download his toolchain and BTstack
+        working-directory: gp
+        run: make TOOLCHAIN_RELEASE_TAG="$TOOLCHAIN_RELEASE_TAG" toolchain-fetch btstack-source
+
+      - name: Download the root filesystem sources
+        working-directory: gp
+        run: make fetch-rootfs
+
+      - name: Build the image
+        working-directory: gp
+        run: |
+          source "$IDF_PATH/export.sh"
+          make TOOLCHAIN_RELEASE_TAG="$TOOLCHAIN_RELEASE_TAG" IDF_EXPORT="$IDF_PATH/export.sh" all
+
+      # One file per slot, the slot offsets, checksums, and what was built.
+      - name: Collect the slot images
+        working-directory: gp
+        run: |
+          set -e
+          mkdir -p ../images
+          for f in spl_app.bin u-boot.itb esp32s31_generic.dtb radio.bin xipImage rootfs.sqfs build-manifest.json; do
+            cp "$OUT/images/$f" ../images/
+          done
+          cp configs/esp32s31-layout.cfg ../images/
+          cp "$OUT/linux/.config" ../images/linux.config
+          {
+            echo "GrieferPig/esp32-s31-linux $GP_COMMIT"
+            git submodule status
+            echo "patches:"
+            (cd "$GITHUB_WORKSPACE/ours" && git log -1 --format='esp32s31-alpine %H' && ls grieferpig/patches/*/)
+          } > ../images/BUILD-INFO.txt
+          (cd ../images && sha256sum spl_app.bin u-boot.itb esp32s31_generic.dtb radio.bin xipImage rootfs.sqfs > SHA256SUMS)
+          ls -l ../images
+          cat ../images/SHA256SUMS
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: grieferpig-images
+          path: images/
+          retention-days: 30
