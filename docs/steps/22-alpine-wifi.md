@@ -102,8 +102,8 @@ date
 - `ca-certificates-bundle` is `/etc/ssl/certs/ca-certificates.crt`, the
   certificate authorities that `wget` (through `ssl_client`) and `apk` check
   the github.io certificate against. The board's root was made from
-  `alpine-base` in step 13, and nothing in it depends on this package.
-  Without it `wget` stops with `certificate verify failed`.
+  `alpine-base` in step 13, which does not depend on this package. Without
+  it `wget` stops with `certificate verify failed`.
 - The board has no RTC. OpenRC's `swclock` sets the clock to the last clean
   shutdown, which can be days ago (a reset with RST saves nothing). The
   github.io certificate is only valid between two dates, and `wget` and
@@ -234,12 +234,17 @@ BOARD:
 
 ```sh
 rc-update add wpa_supplicant boot
-rc-update show | grep -e networking -e wpa_supplicant -e local
+rc-update add ntpd default
+rc-update show | grep -e networking -e wpa_supplicant -e ntpd -e local
 reboot
 ```
 
 - `boot`: the same runlevel as `networking`. Which of the two finishes
   first does not matter, because `udhcpc -b` keeps trying.
+- `ntpd` is BusyBox's NTP client as a service (`busybox-openrc`, options in
+  `/etc/conf.d/ntpd`: `-N -p pool.ntp.org`). It sets the clock once the
+  network is up and keeps it right, so section 3's `ntpd -q` is not needed
+  after a reboot.
 - If you installed the stopgap script, turn it off before the reboot with
   `chmod -x /etc/local.d/gp-wifi.start`. OpenRC's `local` service runs only
   executable `.start` files, and the file stays, for going back.
@@ -250,13 +255,23 @@ After the boot, log in on the serial console:
 ```sh
 ip -4 addr show wlan0
 rc-status boot | grep -e wpa_supplicant -e networking
+rc-status default | grep ntpd
+date
 free
 ```
 
-Both services should be `[ started ]`, and `wlan0` should have an address
-without anything run by hand. `free` shows what Alpine's wpa_supplicant
-leaves of the RAM (8548 KiB available with no Wi-Fi on 2026-10-10). SSH
-from the PC then works again with the address `ip` printed.
+The three services should be `[ started ]`, `wlan0` should have an address
+without anything run by hand, and `date` should print the current time.
+`free` shows what Alpine's wpa_supplicant leaves of the RAM (8548 KiB
+available with no Wi-Fi on 2026-10-10). SSH from the PC then works with the
+address `ip` printed ([step 17](17-ssh.md)).
+
+Do not run `setup-alpine`, which the login message suggests. It is Alpine's
+installer: `setup-apkrepos` would point `/etc/apk/repositories` at the
+official mirrors, which have no riscv32 packages, `setup-interfaces` would
+rewrite `/etc/network/interfaces`, and `setup-disk` partitions and formats
+a disk, here the stick Alpine runs from. Single parts are safe on their own,
+for example `setup-timezone` (after `apk add tzdata`) or `setup-hostname`.
 
 ## 9. Going back
 
