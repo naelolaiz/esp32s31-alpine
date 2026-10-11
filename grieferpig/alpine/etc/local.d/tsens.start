@@ -9,6 +9,12 @@
 # until the next reboot, so this runs at every boot.
 #
 # The overlay is built from grieferpig/overlays/esp32s31-overlay-tsens.dtso.
+#
+# Every command and its output go to /var/log/tsens.log: OpenRC sends the
+# output of local.d scripts to /dev/null unless it runs verbose.
+
+exec >/var/log/tsens.log 2>&1
+set -x
 
 dtbo=/usr/local/lib/s31-overlays/esp32s31-overlay-tsens.dtbo
 
@@ -18,7 +24,7 @@ if grep -qx esp32s31_tsens /sys/class/hwmon/hwmon*/name 2>/dev/null; then
 fi
 
 if [ ! -c /dev/s31-overlay ]; then
-	echo "tsens.start: no /dev/s31-overlay, this is not GrieferPig's kernel" >&2
+	echo "tsens.start: no /dev/s31-overlay, this is not GrieferPig's kernel"
 	exit 0
 fi
 
