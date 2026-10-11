@@ -9,9 +9,9 @@ Since 2026-10-10 the board runs GrieferPig's boot stack and kernel
 radio module, so `wlan0` exists before Alpine starts, and
 [`grieferpig/persist/sbin/init`](../../grieferpig/persist/sbin/init) then
 switches to Alpine on the stick. Until now Alpine had no wpa_supplicant of
-its own: the stopgap
-[`gp-wifi.start`](../../grieferpig/alpine/etc/local.d/gp-wifi.start) runs
-his copy from his read-only root in a chroot. The radio driver port of step
+its own: Wi-Fi came from his copy, run from his read-only root in a chroot
+(by hand, or by the stopgap script
+[`gp-wifi.start`](../../grieferpig/alpine/etc/local.d/gp-wifi.start)). The radio driver port of step
 21 is not needed on his kernel.
 
 GitHub Actions now builds wpa_supplicant, libnl3 and iw and publishes them
@@ -25,27 +25,54 @@ on Pages ([CI guide](https://github.com/naelolaiz/alpine-riscv32/blob/main/docs/
 | Signing keys | `-6ac57722.rsa.pub` (the PC's key) | also `alpine-riscv32-ci.rsa.pub` (the workflow's key) |
 | wpa_supplicant | GrieferPig's, in a chroot | Alpine's, started by its OpenRC service |
 | Wi-Fi profile | `/etc/esp32-conf/wpa_supplicant.conf` in his overlay | `/etc/wpa_supplicant/wpa_supplicant.conf` on the stick |
-| DHCP on `wlan0` | the stopgap runs `udhcpc` | the `networking` service, from `/etc/network/interfaces` |
+| DHCP on `wlan0` | `udhcpc` by hand | the `networking` service, from `/etc/network/interfaces` |
 
 ## 2. Network for now
 
-The steps below download from the internet, so Wi-Fi has to work first,
-through the stopgap. BOARD, Alpine logged in as root, on the serial
-console, not over SSH: the script stops `wpa_supplicant` and `udhcpc`
-before starting them again, which drops an SSH connection over Wi-Fi.
+The steps below download from the internet, so Wi-Fi has to work once more
+with GrieferPig's wpa_supplicant. BOARD, Alpine logged in as root, on the
+serial console. First check which MTD partitions hold his root and his
+overlay:
 
 ```sh
-cat /var/log/gp-wifi.log
-sh /etc/local.d/gp-wifi.start
-tail -3 /var/log/gp-wifi.log
-ip -4 addr show wlan0
+grep -e rootfs -e persist /proc/mtd
 ```
 
-- The first `cat` shows what the script did at the last boot, before the
-  run by hand overwrites the log. `No such file or directory` means it did
-  not run at boot at all.
-- `sh` runs the script whether or not the file is executable.
-- `ip` should show an `inet` line with the address from the router.
+On this board `mtd7` is `"rootfs"` (his squashfs) and `mtd5` is `"persist"`
+(his JFFS2 overlay); `/dev/mtdblockN` is the block device of `mtdN`. Then,
+after a fresh boot:
+
+```sh
+mkdir -p /mnt/gp /mnt/persist
+mount -t squashfs -o ro /dev/mtdblock7 /mnt/gp
+mount -t jffs2 -o ro /dev/mtdblock5 /mnt/persist
+mount -o bind /dev /mnt/gp/dev; mount -t proc proc /mnt/gp/proc; mount -t sysfs sysfs /mnt/gp/sys
+mount -t tmpfs -o mode=0755 tmpfs /mnt/gp/run; mount -t tmpfs -o mode=1777 tmpfs /mnt/gp/tmp
+cp /mnt/persist/upper/etc/esp32-conf/wpa_supplicant.conf /mnt/gp/run/wpa.conf
+ip link set wlan0 up
+chroot /mnt/gp wpa_supplicant -B -D nl80211 -i wlan0 -c /run/wpa.conf
+sleep 10; chroot /mnt/gp wpa_cli -p /run/wpa_supplicant -i wlan0 status | grep wpa_state
+udhcpc -i wlan0
+```
+
+- His squashfs has his wpa_supplicant with the libraries it was built
+  against; `chroot` runs it there. His overlay has the Wi-Fi profile that
+  `esp32-config wifi connect` wrote.
+- `dev`, `proc` and `sys` give the chroot the same kernel interfaces as
+  Alpine. His root is read-only, so `run` (wpa_supplicant's control socket)
+  and `tmp` (wpa_cli's reply socket) get a tmpfs each.
+- `wpa_state=COMPLETED` means the board joined the network; `udhcpc` then
+  prints `lease of ... obtained`.
+- Start it once only. A second wpa_supplicant on the same `wlan0` makes
+  both scan forever (`wpa_state=SCANNING`, seen on 2026-10-11), and
+  mounting the tmpfs again hides the first one's control socket.
+  `ps | grep '[w]pa_supplicant'` should print one line;
+  `killall wpa_supplicant` stops them all.
+
+The stopgap script
+[`gp-wifi.start`](../../grieferpig/alpine/etc/local.d/gp-wifi.start) does
+the same at boot, when it is installed in `/etc/local.d`. After this step
+it is not needed.
 
 ## 3. The clock
 
@@ -124,7 +151,7 @@ ls /etc/init.d/wpa_supplicant
 
 GrieferPig's `esp32-config wifi connect` wrote a plain wpa_supplicant
 configuration in his overlay, which Alpine's wpa_supplicant reads as it is.
-The stopgap of section 2 mounted that overlay read-only on `/mnt/persist`.
+Section 2 mounted that overlay read-only on `/mnt/persist`.
 BOARD:
 
 ```sh
@@ -154,7 +181,7 @@ cat /etc/network/interfaces
   the association is done.
 - `eth0` stays as in step 15: no `auto`, `ifup eth0` by hand with the cable.
 
-Now replace the stopgap's processes with Alpine's. BOARD, on the serial
+Now replace GrieferPig's wpa_supplicant with Alpine's. BOARD, on the serial
 console (this drops SSH for a moment):
 
 ```sh
@@ -167,7 +194,7 @@ ip -4 addr show wlan0
 ```
 
 - `killall` stops GrieferPig's wpa_supplicant (the chroot's) and the
-  stopgap's `udhcpc`.
+  `udhcpc` of section 2.
 - `rc-service` starts `/sbin/wpa_supplicant` from Alpine with the profile
   from section 6. `ps` shows the command line the service chose; it should
   name `wlan0` and `/etc/wpa_supplicant/wpa_supplicant.conf`.
@@ -185,15 +212,15 @@ BOARD:
 
 ```sh
 rc-update add wpa_supplicant boot
-chmod -x /etc/local.d/gp-wifi.start
 rc-update show | grep -e networking -e wpa_supplicant -e local
 reboot
 ```
 
 - `boot`: the same runlevel as `networking`. Which of the two finishes
   first does not matter, because `udhcpc -b` keeps trying.
-- `chmod -x`: OpenRC's `local` service runs only executable `.start` files,
-  so the stopgap no longer runs. The file stays, for going back.
+- If you installed the stopgap script, turn it off before the reboot with
+  `chmod -x /etc/local.d/gp-wifi.start`. OpenRC's `local` service runs only
+  executable `.start` files, and the file stays, for going back.
 - If the board does not restart after `reboot`, tap RST.
 
 After the boot, log in on the serial console:
@@ -211,11 +238,12 @@ from the PC then works again with the address `ip` printed.
 
 ## 9. Going back
 
-To the stopgap, BOARD:
+To GrieferPig's wpa_supplicant, BOARD: stop Alpine's from starting at boot,
+then start his by hand as in section 2 (or `chmod +x` the stopgap script, if
+installed):
 
 ```sh
 rc-update del wpa_supplicant boot
-chmod +x /etc/local.d/gp-wifi.start
 ```
 
 To the stick repository, BOARD:
