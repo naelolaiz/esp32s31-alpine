@@ -15,7 +15,11 @@ something changes.
 | Kernel drivers | UART, stmmac Ethernet + Motorcomm PHY, I2C, GPIO, pinctrl, USB DWC2 host + PHY, MTD physmap, cramfs, tmpfs, devtmpfs | [kernel defconfig][kdefconfig] |
 | RAM | 16 MB PSRAM; about 12.7 MB free at runtime on the community port | [GrieferPig port][grieferpig] |
 | Flash | 16 MiB NOR; rootfs slot at 0xC00000, 4 MiB, compressed cramfs mounted from the XIP window | [rootfs-cramfs.sh][cramfs] |
-| Userspace ABI | Toolchain `riscv64-esp-linux-musl` GCC 14.1.1; rv32 with M, A, C (no F/D); musl; headers 6.6 | [defconfig][brdefconfig] |
+| Userspace ABI | Toolchain `riscv64-esp-linux-musl` GCC 14.1.1; userspace built rv32 with M, A, C, `ilp32` soft-float; musl; headers 6.6 | [defconfig][brdefconfig] |
+| F extension | Present, without D (confirmed on the board 2026-10-10): float instructions run and keep their state across context switches once the kernel has `CONFIG_FPU_F_ONLY` and `f` in the device tree (`kernel/patches/0002`, `0003`). Espressif's device tree lists no `f`, and stock Linux drops F when D is missing; Espressif's Wi-Fi libraries are `rv32imafc` with the single-float ABI | [step 20 journal](journal/2026-10-10-fpu-f-only.md), [esp32-wifi-lib](https://github.com/espressif/esp32-wifi-lib) af55a0c |
+| Bit manipulation | Zba, Zbb, Zbc and Zbs present on both cores (32 instructions checked on the board 2026-10-10, pinned to each core with `tools/bitmanip-test.c`). Espressif's device tree lists none of them; GrieferPig's lists all four and builds his user space with them | [bitmanip journal](journal/2026-10-10-bitmanip.md) |
+| Hart 1 | Unused by Linux (one `cpu@0`, no `CONFIG_SMP`; on the board `cpu/possible` is `0`). Espressif's OpenSBI can start it since 2026-10-06 (SBI HSM device, `hsm.c`); the build on our board predates that (no `esp32s31-hsm` in `u-boot.itb`, step 19) | [espressif/opensbi](https://github.com/espressif/opensbi/tree/integration/v1.6-esp32s31) 5395e03 |
+| Internal SRAM | 512 KiB at 0x2F000000, not covered by the data cache (Espressif's `drivers/cache/esp32s31_cache.c`). OpenSBI 1.6: code 0x2F000000-0x2F01A900, data and BSS 0x2F020000-0x2F023B88, then stacks and heap (`readelf` of `fw_dynamic.elf`, step 19); it prints no banner. Kernel DMA pool 0x2F030000-0x2F070000 (256 KiB, `shared-dma-pool`), the only reservation; step 20 moves it to 0x2F073000 (20 KiB). U-Boot copies the DTB to the top of PSRAM (0x50FFB000) | OpenSBI `config.h`, `objects.mk`; kernel `esp32s31.dts` dc0e382; [step 19 board checks](journal/2026-10-10-native-wifi-board-checks.md) |
 | Peripherals | Developer preview: only the UART console is reliable | [CNX][cnx] |
 
 ## Alpine and musl
@@ -28,12 +32,18 @@ something changes.
 | aports | gcc lacks an rv32 `_arch_configure` case; musl, openssl, binutils handle only `riscv64`; bootstrap.sh libatomic special case is `riscv64` only | [aports](https://github.com/alpinelinux/aports) |
 | Alpine | Ships `riscv64` only | aports |
 
-## Community ports (Linux 7.1)
+## Community ports
+
+vanbuong and platima build upstream Linux 7.1.3 and 7.2.7 with their own
+ESP-IDF loader and OpenSBI 1.9; GrieferPig builds a 6.18 kernel whose first
+commits are Espressif's, on SPL, U-Boot 2024.07 and an OpenSBI 1.9 fork
+(checked 2026-10-07, step 19 journal).
 
 | Feature | Status | Source |
 | --- | --- | --- |
 | microSD | `dw_mmc` plus an esp32s31 glue patch (internal DMA, non-coherent descriptor ring); FAT32 and ext4 verified on Korvo-1 | [vanbuong][vanbuong], [platima][platima] |
-| Native Wi-Fi | Hart 0 runs ESP-IDF as Wi-Fi firmware in M-mode; Linux on hart 1; full-MAC cfg80211 driver `esp32s31-wifi` over shared-SRAM rings; credentials via sysfs. vanbuong: associates; platima: not yet | [vanbuong][vanbuong], [platima][platima] |
+| Native Wi-Fi, design A | Hart 0 runs ESP-IDF as Wi-Fi firmware in M-mode; Linux on hart 1; full-MAC cfg80211 driver `esp32s31-wifi` over SRAM rings at 0x2F050000. vanbuong: keys via sysfs; platima: keys via `wpa_supplicant`, README lists Wi-Fi as working | [vanbuong][vanbuong], [platima][platima] |
+| Native Wi-Fi, design B | ESP-IDF Wi-Fi libraries prelinked from flash and run inside Linux (S-mode) with a FreeRTOS emulation; soft-MAC mac80211 driver, plain `wpa_supplicant`, WPA2-CCMP station only; about 282 KiB SRAM | [GrieferPig][grieferpig] |
 | USB storage | vanbuong: works; platima: disabled because it hangs boot | [vanbuong][vanbuong], [platima][platima] |
 
 [cnx]: https://www.cnx-software.com/2026/08/22/espressif-systems-releases-a-linux-bsp-developer-preview-for-esp32-s31-risc-v-microprocessor/
