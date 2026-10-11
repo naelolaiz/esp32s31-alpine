@@ -71,7 +71,7 @@ minutes and produced one file per slot:
 | `xipImage` | 6228940 | 6 MiB |
 | `rootfs.sqfs` | 3125248 | 6 MiB |
 
-The kernel has 62 KiB left in its slot. Juan flashed the six slots, not
+The kernel has 62 KiB left in its slot. The six slots were flashed, not
 `persist` (step 22a sections 4 and 5). Alpine booted from the stick as before, and
 `iw list` now shows:
 
@@ -158,8 +158,8 @@ his kernel has no kdump, pstore or mtdoops to keep the log across the
 reset. The likely reading (not proven): with no swap, memory pressure made
 the kernel drop pages of init's program from RAM, and reading them back
 from the stick failed. His kernel config expects swap on USB storage for
-such peaks. Step 22 section 9 adds a 128 MiB swap file on `sda1`, which
-Juan set up.
+such peaks. Step 22 section 9 adds a 128 MiB swap file on `sda1`, now set
+up on the board.
 
 ## Upstream
 
