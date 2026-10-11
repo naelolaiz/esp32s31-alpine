@@ -146,8 +146,10 @@ ls -l dist/current/
 
 ## 4. Back up the flash
 
-BOARD in download mode (hold BOOT, tap RST). HOST, in the porting
-directory, with the esptool venv of the `esp32s31-alpine` clone:
+BOARD, Alpine: `poweroff`, so the stick is unmounted cleanly. Close the
+serial console (esptool needs the port), then put the board in download
+mode (hold BOOT, tap RST). HOST, in the porting directory, with the esptool
+venv of the `esp32s31-alpine` clone:
 
 ```sh
 esp32s31-alpine/.venv/bin/esptool --chip esp32s31 --port /dev/ttyUSB0 --baud 1152000 read-flash 0 0x1000000 s31_full_flash-gp-alpine.bin
@@ -161,7 +163,8 @@ holds the Wi-Fi key.
 ## 5. Flash every slot except persist
 
 `persist` (`0x1EE000` to `0x400000`) is not written, so the hand-over to
-Alpine and the Wi-Fi profile stay.
+Alpine and the Wi-Fi profile stay. esptool resets the board after
+`read-flash`, so put it in download mode again first.
 
 From a PC build, HOST, in `grieferpig-build/esp32-s31-linux`, with the
 ESP-IDF environment of section 3.5, board in download mode:
@@ -186,12 +189,19 @@ the stick plugged in.
 
 ## 6. Check on the board
 
-BOARD, Alpine, as root, then section 2 of [step 22](22-alpine-wifi.md):
+BOARD, Alpine, as root:
 
 ```sh
 dmesg | grep -i -e 'radio XIP' -e esp32s31-radio | head -5
+iw list | grep -e 2467 -e 2472
+ip -4 addr show wlan0
 ```
 
-The radio module loads from the new squashfs and finds the new radio
-image. Section 2's wpa_supplicant should then reach `wpa_state=COMPLETED`
-with the router on channel 13.
+- The radio module loads from the new squashfs and finds the new radio
+  image.
+- 2467 and 2472 MHz are channels 12 and 13, which the old driver did not
+  list. With the world regulatory domain they show `no IR` until the board
+  has heard a beacon there; `disabled` would mean they still cannot be
+  used.
+- After [step 22](22-alpine-wifi.md) `wlan0` gets its address at boot as
+  before, now also with the router on channel 12 or 13.
