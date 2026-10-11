@@ -1,0 +1,28 @@
+// SPDX-License-Identifier: GPL-2.0+
+/*
+ * Switches on the ESP32-S31 temperature sensor on GrieferPig's kernel,
+ * and nothing else.
+ *
+ * His kernel has the driver built in (CONFIG_SENSORS_ESP32S31_TSENS=y), but
+ * the node "tsens" in esp32s31.dtsi is disabled. His own "analog" overlay
+ * enables it together with the ADC, DAC, touch and comparator, and claims
+ * 34 GPIOs for them; the sensor itself has no pins, so this overlay claims
+ * none.
+ *
+ * His overlay manager (/dev/s31-overlay) requires espressif,overlay-name.
+ * &tsens is resolved at apply time against the board's DTB, which he builds
+ * with -@.
+ *
+ * Build: dtc -I dts -O dtb -o esp32s31-overlay-tsens.dtbo esp32s31-overlay-tsens.dtso
+ * Apply: cat esp32s31-overlay-tsens.dtbo > /dev/s31-overlay
+ */
+/dts-v1/;
+/plugin/;
+
+/ {
+	espressif,overlay-name = "tsens";
+};
+
+&tsens {
+	status = "okay";
+};
