@@ -9,7 +9,9 @@ except `persist`, so our `/sbin/init` and the Wi-Fi profile stay.
 On 2026-10-11 the router's automatic channel choice put its 2.4 GHz network
 on channel 13 (2472 MHz). The board saw 38 other networks, never that one,
 and wpa_supplicant stayed in `SCANNING`
-([step 22](22-alpine-wifi.md), section 2).
+([step 22](22-alpine-wifi.md), section 2). A router set to a fixed channel
+from 1 to 11 needs no rebuild; with the rebuild, the router can keep its
+automatic choice.
 
 - His radio firmware already allows channels 1 to 13: `s31_wifi_prepare()`
   in `firmware/radio/radio_stack.c` sets the ESP-IDF country `CN` with

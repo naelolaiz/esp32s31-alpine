@@ -75,8 +75,9 @@ driver (`drivers/net/wireless/espressif/esp32s31_softmac.c`) registers only
 2.4 GHz channels 1 to 11 (2412 to 2462 MHz). On 2026-10-11 the router's
 automatic channel choice had moved its 2.4 GHz network to channel 13
 (2472 MHz), and the board saw 38 other networks but not that one. Setting
-the router to a fixed channel 1, 6 or 11 fixes it. To check which channels
-the board hears:
+the router to a fixed channel 1, 6 or 11 fixes it;
+[step 22a](22a-grieferpig-rebuild.md) instead rebuilds his image with
+channels 12 and 13. To check which channels the board hears:
 
 ```sh
 timeout 20 chroot /mnt/gp wpa_supplicant -d -D nl80211 -i wlan0 -c /run/wpa.conf > /tmp/wpa-debug.log 2>&1
@@ -88,19 +89,26 @@ The stopgap script
 the same at boot, when it is installed in `/etc/local.d`. After this step
 it is not needed.
 
-## 3. The clock
+## 3. Certificates and the clock
 
 BOARD:
 
 ```sh
+apk add --repositories-file /dev/null -X /root/repo/main ca-certificates-bundle
 ntpd -n -q -p pool.ntp.org
 date
 ```
 
-The board has no RTC. OpenRC's `swclock` sets the clock to the last clean
-shutdown, which can be days ago (a reset with RST saves nothing). The
-github.io certificate is only valid between two dates, and `wget` and `apk`
-refuse the connection when the clock is outside them.
+- `ca-certificates-bundle` is `/etc/ssl/certs/ca-certificates.crt`, the
+  certificate authorities that `wget` (through `ssl_client`) and `apk` check
+  the github.io certificate against. The board's root was made from
+  `alpine-base` in step 13, and nothing in it depends on this package.
+  Without it `wget` stops with `certificate verify failed`.
+- The board has no RTC. OpenRC's `swclock` sets the clock to the last clean
+  shutdown, which can be days ago (a reset with RST saves nothing). The
+  github.io certificate is only valid between two dates, and `wget` and
+  `apk` refuse the connection when the clock is outside them, with the same
+  `certificate verify failed`.
 
 ## 4. The workflow's key and the Pages repositories
 
