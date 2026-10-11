@@ -125,6 +125,11 @@ rc-update show | grep local
   is missing, `rc-update add local default`.
 - The script does nothing when the sensor is already there, and nothing on a
   kernel without `/dev/s31-overlay`.
+- It writes every command and its output to `/var/log/tsens.log`, because
+  OpenRC hides the output of `local.d` scripts. If the boot shows
+  `* Starting local ... [ !! ]`, `cat /var/log/tsens.log` shows whether this
+  script failed and on which line; `rc-service -v local restart` names the
+  failing script among all of them.
 
 Reboot, then BOARD: `cat /sys/class/hwmon/hwmon*/name` prints
 `esp32s31_tsens` again.
