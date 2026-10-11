@@ -5,9 +5,10 @@ whether porting lm-sensors made sense, and which of the chip's sensors Linux
 could read.
 
 End: the temperature sensor reads 28.6 °C from Alpine through
-`/sys/class/hwmon`, switched on with a 267-byte overlay of our own, and
-`tsens.start` switches it on at boot. The lm-sensors package is written,
-not yet tried on the board.
+`/sys/class/hwmon`, switched on with a 267-byte overlay of our own.
+`tsens.start` applies it from OpenRC's `local` service; its first boot
+reported a failure that was not explained. The lm-sensors package is
+written, not yet tried on the board.
 
 ## What the two kernels have
 
@@ -70,9 +71,9 @@ an overlay that changes a property of an existing node
 ## At boot
 
 With the `.dtbo` in `/usr/local/lib/s31-overlays/` and `tsens.start` in
-`/etc/local.d`, the first boot showed `* Starting local ... [ !! ]`. After
-that OpenRC's `local` service worked, and the sensor was there without a
-manual step:
+`/etc/local.d`, the first boot showed `* Starting local ... [ !! ]`,
+with nothing changed on the board since the install. Run again with
+`rc-service -v local restart`, `local` worked, and the sensor was there:
 
 ```
 esp32s31:~# cat /sys/class/hwmon/hwmon*/name
@@ -81,9 +82,9 @@ esp32s31:~# cat /sys/class/hwmon/hwmon0/temp1_input
 27726
 ```
 
-What failed the first time was not found. `rc-service -v local restart`
-names the failing script if it happens again (OpenRC sends the scripts'
-output to `/dev/null` unless it runs verbose).
+What failed at boot was not found. `rc-service -v local restart` names the
+failing script if it happens again (OpenRC sends the scripts' output to
+`/dev/null` unless it runs verbose).
 
 ## Open
 
